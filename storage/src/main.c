@@ -13,7 +13,9 @@ int main(int argc, char *argv[])
 
     inicializar_fs(cfg);
 
-    int listener = iniciar_servidor(cfg->puerto_escucha);
+    char puerto_str[6];
+    sprintf(puerto_str, "%d", cfg->puerto_escucha);
+    int listener = iniciar_servidor(puerto_str);
     log_info(logger, "## Storage escuchando en puerto %d", cfg->puerto_escucha);
 
     while (1)

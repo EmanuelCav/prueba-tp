@@ -2,7 +2,8 @@
 
 t_storage_config *leer_config_storage(const char *path)
 {
-    t_config *cfg = config_create(path);
+    t_config *cfg = config_create((char *)path);
+
     if (!cfg)
     {
         printf("Error leyendo archivo config\n");
