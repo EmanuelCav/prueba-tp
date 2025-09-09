@@ -16,7 +16,6 @@ void *manejar_worker(void *arg, t_log *logger)
     }
     buffer[bytes] = '\0';
 
-    // Solicitud BLOCK_SIZE
     if (strcmp(buffer, "GET_BLOCK_SIZE") == 0)
     {
         char respuesta[32];

@@ -13,6 +13,7 @@
         "conexiones.h": "c",
         "master.h": "c",
         "storage_fs.h": "c",
-        "storage.h": "c"
+        "storage.h": "c",
+        "worker_conexiones.h": "c"
     }
 }
