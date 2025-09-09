@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
-#define MAX_BUFFER 256
+#define MAX_BUFFER 1024
 
 /**
  * @brief Envía una solicitud de ejecución de query al Master.

@@ -4,8 +4,6 @@
 #define QUERY_CONTROL_LOG_PATH "./logs/query_control.log"
 #define QUERY_CONTROL_MODULE_NAME "QUERY_CONTROL"
 
-#define MAX_BUFFER 1024
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
