@@ -40,6 +40,3 @@ void registrar_worker(int socket, t_log *logger);
 void enviar_query_worker(int query_id, const char *path_query, int prioridad, t_log *logger);
 
 #endif
-
-t_worker workers[MAX_WORKERS];
-int cantidad_workers = 0;
