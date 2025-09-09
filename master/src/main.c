@@ -12,7 +12,9 @@ int main(int argc, char *argv[])
     t_config_master *cfg = master_leer_config(argv[1]);
     logger = log_create(MASTER_LOG_PATH, MASTER_MODULE_NAME, 1, log_level_from_string(cfg->log_level));
 
-    int listener = iniciar_servidor(cfg->puerto_escucha);
+    char puerto_str[6];
+    sprintf(puerto_str, "%d", cfg->puerto_escucha);
+    int listener = iniciar_servidor(puerto_str);
     log_info(logger, "## Master escuchando en puerto %d con algoritmo %s (Aging=%d ms)",
              cfg->puerto_escucha, cfg->algoritmo_planificacion, cfg->tiempo_aging);
 

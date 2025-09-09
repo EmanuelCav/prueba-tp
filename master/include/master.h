@@ -4,7 +4,7 @@
 #define MASTER_LOG_PATH "./logs/master.log"
 #define MASTER_MODULE_NAME "MASTER"
 
-#define MAX_BUFFER 256
+#define MAX_BUFFER 1024
 
 #include <stdio.h>
 #include <stdlib.h>

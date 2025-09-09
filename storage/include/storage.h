@@ -4,7 +4,7 @@
 #define STORAGE_LOG_PATH "./logs/storage.log"
 #define STORAGE_MODULE_NAME "STORAGE"
 
-#define MAX_BUFFER 256
+#define MAX_BUFFER 1024
 
 #include <stdio.h>
 #include <stdlib.h>
