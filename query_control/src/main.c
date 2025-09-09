@@ -1,4 +1,4 @@
-#include <include/query_control.h>
+#include "../include/query_control.h"
 
 int main(int argc, char *argv[])
 {

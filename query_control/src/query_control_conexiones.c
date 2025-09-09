@@ -1,4 +1,4 @@
-#include <include/query_control_conexiones.h>
+#include "../include/query_control_conexiones.h"
 
 int conectar_master(char *ip, int puerto)
 {

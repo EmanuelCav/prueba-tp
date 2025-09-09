@@ -1,4 +1,4 @@
-#include <include/query_control_lectura.h>
+#include "../include/query_control_lectura.h"
 
 void enviar_solicitud_query(int socket_master, char *path_query, int prioridad, t_log *logger)
 {

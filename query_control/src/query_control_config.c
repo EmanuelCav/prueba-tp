@@ -1,4 +1,4 @@
-#include <include/query_control_config.h>
+#include "../include/query_control_config.h"
 
 t_config_config *leer_config(char *path)
 {
