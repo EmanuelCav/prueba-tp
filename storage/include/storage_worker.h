@@ -20,4 +20,6 @@
  */
 void *manejar_worker(void *arg);
 
+t_log *logger;
+
 #endif

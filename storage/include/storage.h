@@ -29,6 +29,5 @@
 /**
  * @brief Logger global para el módulo Storage.
  */
-t_log *logger;
 
 #endif

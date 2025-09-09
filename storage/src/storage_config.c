@@ -11,7 +11,7 @@ t_storage_config *leer_config_storage(const char *path)
 
     t_storage_config *scfg = malloc(sizeof(t_storage_config));
     scfg->puerto_escucha = config_get_int_value(cfg, "PUERTO_ESCUCHA");
-    scfg->fresh_start = config_get_boolean_value(cfg, "FRESH_START");
+    scfg->fresh_start = config_get_int_value(cfg, "FRESH_START");
     strcpy(scfg->punto_montaje, config_get_string_value(cfg, "PUNTO_MONTAJE"));
     scfg->retardo_operacion = config_get_int_value(cfg, "RETARDO_OPERACION");
     scfg->retardo_acceso_bloque = config_get_int_value(cfg, "RETARDO_ACCESO_BLOQUE");

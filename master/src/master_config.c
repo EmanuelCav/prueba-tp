@@ -2,7 +2,7 @@
 
 t_config_master *master_leer_config(const char *path)
 {
-    t_config *cfg = config_create(path);
+    t_config *cfg = config_create((char*)path);
     if (!cfg)
     {
         printf("Error leyendo configuración\n");
