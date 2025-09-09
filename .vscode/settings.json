@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "logging.h": "c",
+        "main.h": "c",
+        "config.h": "c",
+        "stdio.h": "c",
+        "query_control_proceso.h": "c",
+        "master_config.h": "c",
+        "log.h": "c"
+    }
+}
