@@ -2,9 +2,11 @@
 
 int conectar_al_master(t_worker_config *cfg, t_log *logger)
 {
-    int sock_master = conectar_servidor(cfg->ip_master, cfg->puerto_master);
+    char puerto_str[6];
+    sprintf(puerto_str, "%d", cfg->puerto_master);
+    int sock_master = conectar_servidor(cfg->ip_master, puerto_str);
     send(sock_master, "WORKER", strlen("WORKER"), 0);
-    log_info(logger, "## Worker conectado al Master (%s:%d)", cfg->ip_master, cfg->puerto_master);
+    log_info(logger, "## Worker conectado al Master (%s:%d)", cfg->ip_master, puerto_str);
     return sock_master;
 }
 

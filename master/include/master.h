@@ -1,12 +1,5 @@
-#ifndef QUERY_CONTROL_H_
-#define QUERY_CONTROL_H_
-
-#define MASTER_LOG_PATH "./logs/master.log"
-#define MASTER_MODULE_NAME "MASTER"
-
-#define MAX_BUFFER 1024
-
-extern t_log *logger;
+#ifndef MASTER_H_
+#define MASTER_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +21,10 @@ extern t_log *logger;
 
 #include "../../utils/src/utils/conexiones/conexiones.h"
 
-t_log *logger;
+#define MASTER_LOG_PATH "./logs/master.log"
+#define MASTER_MODULE_NAME "MASTER"
+#define MAX_BUFFER 1024
+
+extern t_log *logger;
 
 #endif

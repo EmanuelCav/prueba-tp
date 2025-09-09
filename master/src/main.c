@@ -1,5 +1,7 @@
 #include "../include/master.h"
 
+t_log *logger;
+
 int main(int argc, char *argv[])
 
 {
