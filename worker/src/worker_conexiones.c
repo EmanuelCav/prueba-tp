@@ -6,7 +6,7 @@ int conectar_al_master(t_worker_config *cfg, t_log *logger)
     sprintf(puerto_str, "%d", cfg->puerto_master);
     int sock_master = conectar_servidor(cfg->ip_master, puerto_str);
     send(sock_master, "WORKER", strlen("WORKER"), 0);
-    log_info(logger, "## Worker conectado al Master (%s:%d)", cfg->ip_master, puerto_str);
+    log_info(logger, "## Worker conectado al Master (%s:%s)", cfg->ip_master, puerto_str);
     return sock_master;
 }
 
@@ -21,13 +21,15 @@ void recibir_query(int sock_master, int *query_id, char *path_query, int *priori
         exit(EXIT_FAILURE);
     }
     buffer[bytes] = '\0';
-    sscanf(buffer, "%d|%d[^|]|%d", query_id, path_query, prioridad);
+    sscanf(buffer, "%d|%[^|]|%d", query_id, path_query, prioridad);
     log_info(logger, "## Query %d: Se recibe la Query. El path de operaciones es: %s", *query_id, path_query);
 }
 
 void consultar_storage(t_worker_config *cfg, t_log *logger, int query_id)
 {
-    int sock_storage = conectar_servidor(cfg->ip_storage, cfg->puerto_storage);
+    char puerto_str[6];
+    sprintf(puerto_str, "%d", cfg->puerto_storage);
+    int sock_storage = conectar_servidor(cfg->ip_storage, puerto_str);
     send(sock_storage, "GET_BLOCK_SIZE", strlen("GET_BLOCK_SIZE"), 0);
 
     char respuesta[64];
