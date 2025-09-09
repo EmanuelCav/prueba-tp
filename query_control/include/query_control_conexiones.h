@@ -9,7 +9,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#include "utils/conexiones/conexiones.h"
+#include "../../utils/src/utils/conexiones/conexiones.h"
 
 /**
  * @brief Conecta el proceso Query Control al proceso Master.

@@ -9,6 +9,7 @@
         "log.h": "c",
         "query_control.h": "c",
         "query_control_conexiones.h": "c",
-        "query_control_lectura.h": "c"
+        "query_control_lectura.h": "c",
+        "conexiones.h": "c"
     }
 }
