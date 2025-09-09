@@ -23,7 +23,8 @@
 
 #include "master_config.h"
 #include "master_workers.h"
-#include "utils/conexiones/conexiones.h"
+
+#include "../../utils/src/utils/conexiones/conexiones.h"
 
 t_log *logger;
 

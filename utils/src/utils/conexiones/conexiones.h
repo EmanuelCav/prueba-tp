@@ -1,8 +1,6 @@
-// Biblioteca para crear un servidor y conectarse a un servidor como cliente
 #ifndef CONEXION_H_
 #define CONEXION_H_
 
-// Bibliotecas estandar
 #include <errno.h>
 #include <netdb.h>
 #include <stdio.h>
@@ -10,8 +8,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/socket.h>
-
-// Prototipos
 
 /**
  * @brief Inicia un servidor en la ip y puerto correspondientes

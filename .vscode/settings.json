@@ -10,6 +10,9 @@
         "query_control.h": "c",
         "query_control_conexiones.h": "c",
         "query_control_lectura.h": "c",
-        "conexiones.h": "c"
+        "conexiones.h": "c",
+        "master.h": "c",
+        "storage_fs.h": "c",
+        "storage.h": "c"
     }
 }

@@ -1,4 +1,4 @@
-#include <include/worker_config.h>
+#include "../include/worker_config.h"
 
 t_worker_config *leer_config_worker(char *path_config)
 {

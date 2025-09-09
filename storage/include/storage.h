@@ -23,7 +23,8 @@
 #include <storage_fs.h>
 #include <storage_worker.h>
 #include <storage_config.h>
-#include <utils/conexiones/conexiones.h>
+
+#include "../../utils/src/utils/conexiones/conexiones.h"
 
 /**
  * @brief Logger global para el módulo Storage.

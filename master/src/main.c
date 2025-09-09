@@ -1,4 +1,4 @@
-#include <include/master.h>
+#include "../include/master.h"
 
 int main(int argc, char *argv[])
 

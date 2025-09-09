@@ -1,4 +1,4 @@
-#include <include/master_config.h>
+#include "../include/master_config.h"
 
 t_config_master *master_leer_config(const char *path)
 {
