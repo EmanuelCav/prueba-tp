@@ -1,5 +1,7 @@
 #include "../include/storage_worker.h"
 
+extern t_log *logger;
+
 void *manejar_worker(void *arg) {
     int sock = *((int*)arg);
     free(arg);

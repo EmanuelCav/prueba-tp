@@ -1,5 +1,7 @@
 #include "../include/storage.h"
 
+t_log *logger;
+
 int main(int argc, char *argv[])
 {
     if (argc != 2)

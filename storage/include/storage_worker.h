@@ -20,6 +20,4 @@
  */
 void *manejar_worker(void *arg);
 
-extern t_log *logger;
-
 #endif

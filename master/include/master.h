@@ -6,6 +6,8 @@
 
 #define MAX_BUFFER 1024
 
+extern t_log *logger;
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

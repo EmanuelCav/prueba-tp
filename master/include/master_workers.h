@@ -41,12 +41,5 @@ void enviar_query_worker(int query_id, const char *path_query, int prioridad, t_
 
 #endif
 
-typedef struct
-{
-    int socket;
-    int worker_id;
-    bool ocupado;
-} t_worker;
-
 t_worker workers[MAX_WORKERS];
 int cantidad_workers = 0;

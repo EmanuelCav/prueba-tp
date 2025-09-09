@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 
         if (strcmp(buffer, "WORKER") == 0)
         {
-            registrar_worker(newfd);
+            registrar_worker(newfd, logger);
         }
         else
         {
@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
                      "## Se conecta un Query Control para ejecutar la Query %s con prioridad %d - Id asignado: %d. Nivel multiprocesamiento %d",
                      path_query, prioridad, query_id, cantidad_workers);
 
-            enviar_query_worker(query_id, path_query, prioridad);
+            enviar_query_worker(query_id, path_query, prioridad, logger);
         }
     }
 
