@@ -14,6 +14,7 @@
         "master.h": "c",
         "storage_fs.h": "c",
         "storage.h": "c",
-        "worker_conexiones.h": "c"
+        "worker_conexiones.h": "c",
+        "storage_config.h": "c"
     }
 }

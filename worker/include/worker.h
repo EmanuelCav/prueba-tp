@@ -17,8 +17,8 @@
 #include <commons/string.h>
 #include <commons/config.h>
 
-#include <worker_config.h>
-#include <worker_conexiones.h>
+#include "worker_config.h"
+#include "worker_conexiones.h"
 
 t_log *logger;
 

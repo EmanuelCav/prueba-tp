@@ -12,7 +12,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include <storage_config.h>
+#include "storage_config.h"
 
 /**
  * @brief Inicializa la estructura del File System (si fresh_start es TRUE crea desde cero)
