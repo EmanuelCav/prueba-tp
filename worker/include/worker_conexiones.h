@@ -11,7 +11,7 @@
 
 #include "worker_config.h"
 
-#include "../../utils/src/utils/conexiones/conexiones.h"
+#include "../../utils/src/conexiones/conexiones.h"
 
 #define MAX_BUFFER 1024
 

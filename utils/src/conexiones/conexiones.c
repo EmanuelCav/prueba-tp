@@ -56,7 +56,6 @@ int iniciar_servidor(char *puerto)
         exit(3);
     }
 
-    printf("## Master escuchando en puerto %s\n", puerto);
     return sockfd;
 }
 
