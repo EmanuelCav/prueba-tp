@@ -17,20 +17,26 @@ void registrar_worker(int socket, t_log *logger)
              worker_id, cantidad_workers);
 }
 
-void enviar_query_worker(int query_id, const char *path_query, int prioridad, t_log *logger)
+void enviar_query_worker(t_queue* ready,t_list *exec, t_log *logger)
 {
     for (int i = 0; i < cantidad_workers; i++)
     {
-        if (!workers[i].ocupado)
+        if (!workers[i].ocupado && !queue_is_empty(ready))
         {
+            t_query* query_pop = queue_pop(ready);
             char mensaje[512];
-            sprintf(mensaje, "%d|%s|%d", query_id, path_query, prioridad);
+            sprintf(mensaje, "%d|%s|%d", query_pop->query_id, query_pop->path_query, query_pop->prioridad);
             send(workers[i].socket, mensaje, strlen(mensaje), 0);
             workers[i].ocupado = true;
+            list_add(exec, query_pop);
 
-            log_info(logger, "## Se envía la Query %d al Worker %d", query_id, workers[i].worker_id);
+            log_info(logger, "## Se envía la Query %d al Worker %d", query_pop->query_id, workers[i].worker_id);
             return;
         }
     }
-    printf("No hay Workers disponibles\n");
+     if (queue_is_empty(ready)) {
+        printf("No hay querys en espera\n");
+    } else {
+        printf("No hay Workers disponibles\n");
+    }
 }

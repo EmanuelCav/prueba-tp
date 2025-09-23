@@ -26,8 +26,5 @@
 
 #include "../../utils/src/conexiones/conexiones.h"
 
-/**
- * @brief Logger global para el módulo Storage.
- */
 
 #endif

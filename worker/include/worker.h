@@ -19,6 +19,7 @@
 
 #include "worker_config.h"
 #include "worker_conexiones.h"
+#include "worker_query_interpreter.h"
 
 t_log *logger;
 

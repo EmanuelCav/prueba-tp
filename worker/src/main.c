@@ -19,6 +19,28 @@ int main(int argc, char *argv[])
     recibir_query(sock_master, &query_id, path_query, &prioridad, logger);
     consultar_storage(cfg, logger, query_id);
 
+    FILE *f = fopen(path_query, "r");
+    if (!f)
+    {
+        log_error(logger, "Worker: no se pudo abrir el archivo de la query: %s", path_query);
+    }
+
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    read = getline(&line, &len, f);
+    while (read != -1)
+    {
+        if (line[read - 1] == '\n')
+        {
+            line[read - 1] = '\0';
+        }
+        query_interpretar(line, query_id, path_query,logger);
+
+        read = getline(&line, &len, f);
+    }
+
     limpiar_recursos_worker(sock_master, cfg, logger);
 
     return 0;

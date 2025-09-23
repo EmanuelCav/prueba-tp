@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <commons/log.h>
+#include "../include/master_queues.h"
 
 #define MAX_WORKERS 50
 
@@ -30,13 +31,12 @@ extern int cantidad_workers;
 void registrar_worker(int socket, t_log *logger);
 
 /**
- * @brief Envía una query a un Worker disponible
- *
- * @param query_id Identificador de la query
- * @param path_query Ruta del archivo de la query
- * @param prioridad Prioridad de la query
+ * @brief Envía una query a un Worker disponible, busca en la cola de ready
+ * 
+ * @param ready Cola de querys en ready
+ * @param exec Cola de querys en executing
  * @param logger Logger para imprimir el log obligatorio
  */
-void enviar_query_worker(int query_id, const char *path_query, int prioridad, t_log *logger);
+void enviar_query_worker(t_queue* ready,t_list* exec, t_log *logger);
 
 #endif

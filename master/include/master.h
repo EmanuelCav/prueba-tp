@@ -18,13 +18,12 @@
 
 #include "master_config.h"
 #include "master_workers.h"
+#include "master_queues.h"
 
 #include "../../utils/src/conexiones/conexiones.h"
 
 #define MASTER_LOG_PATH "./logs/master.log"
 #define MASTER_MODULE_NAME "MASTER"
 #define MAX_BUFFER 1024
-
-extern t_log *logger;
 
 #endif

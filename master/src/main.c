@@ -1,10 +1,13 @@
 #include "../include/master.h"
 
 t_log *logger;
+t_queue *ready;
+t_list *exec;
 
 int main(int argc, char *argv[])
-
 {
+    ready = queue_create();
+    exec = list_create();
     if (argc != 2)
     {
         fprintf(stderr, "Uso: %s <archivo_config>\n", argv[0]);
@@ -53,14 +56,18 @@ int main(int argc, char *argv[])
             sscanf(buffer, "%[^|]|%d", path_query, &prioridad);
             int query_id = query_id_counter++;
 
+            t_query *query = query_create(query_id, prioridad, path_query);
+
             log_info(logger,
                      "## Se conecta un Query Control para ejecutar la Query %s con prioridad %d - Id asignado: %d. Nivel multiprocesamiento %d",
                      path_query, prioridad, query_id, cantidad_workers);
 
-            enviar_query_worker(query_id, path_query, prioridad, logger);
+            queue_push(ready, query);
+            enviar_query_worker(ready,exec, logger);
         }
     }
-
+    queue_destroy_and_destroy_elements(ready,query_destroy);
+    list_destroy_and_destroy_elements(exec, query_destroy);
     log_destroy(logger);
     free(cfg);
     return 0;

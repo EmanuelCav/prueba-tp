@@ -1,5 +1,7 @@
 #include "../include/query_control.h"
 
+t_log* logger;
+
 int main(int argc, char *argv[])
 {
     if (argc != 4)
