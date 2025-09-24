@@ -79,8 +79,8 @@ void crear_archivo_inicial(const char *root_path, int block_size, t_log *logger)
 {
     char path_file[256], path_tag[256], path_logical[256];
     sprintf(path_file, "%s/files/initial_file", root_path);
-    sprintf(path_tag, "%s/BASE", path_file);
-    sprintf(path_logical, "%s/logical_blocks", path_tag);
+    snprintf(path_tag, "%s/BASE", path_file);
+    snprintf(path_logical, "%s/logical_blocks", path_tag);
 
     mkdir(path_file, 0777);
     mkdir(path_tag, 0777);
@@ -88,7 +88,7 @@ void crear_archivo_inicial(const char *root_path, int block_size, t_log *logger)
     log_info(logger, "Directorios creados: %s, %s, %s", path_file, path_tag, path_logical);
 
     char path_metadata_config[256];
-    sprintf(path_metadata_config, "%s/metadata.config", path_tag);
+    snprintf(path_metadata_config, "%s/metadata.config", path_tag);
     FILE *meta = fopen(path_metadata_config, "w");
     fprintf(meta, "TAMAÑO=%d\n", block_size);
     fprintf(meta, "BLOCKS=[0]\n");
@@ -97,7 +97,7 @@ void crear_archivo_inicial(const char *root_path, int block_size, t_log *logger)
     log_info(logger, "Archivo metadata creado: %s", path_metadata_config);
 
     char path_block0[256];
-    sprintf(path_block0, "%s/physical_blocks/block0000.dat", root_path);
+    snprintf(path_block0, "%s/physical_blocks/block0000.dat", root_path);
     FILE *blk = fopen(path_block0, "w");
     for (int i = 0; i < block_size; i++)
         fputc('0', blk);
