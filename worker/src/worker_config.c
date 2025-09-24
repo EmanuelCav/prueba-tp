@@ -27,9 +27,18 @@ t_worker_config *leer_config_worker(char *path_config)
     return wcfg;
 }
 
-void limpiar_recursos_worker(int sock_master, t_worker_config *cfg, t_log *logger)
+void limpiar_recursos_worker(int sock_master, t_worker_config *cfg, t_log *logger, t_memoria_interna *memoria, char *line, FILE *f)
 {
     close(sock_master);
+
+    free(line);
+    fclose(f);
+
+    free(memoria->marcos);
+    free(memoria->memoria);
+    free(memoria);
+
     free(cfg);
+
     log_destroy(logger);
 }

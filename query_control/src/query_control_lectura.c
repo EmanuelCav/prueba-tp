@@ -5,7 +5,13 @@ void enviar_solicitud_query(int socket_master, char *path_query, int prioridad, 
     char mensaje[MAX_BUFFER];
     snprintf(mensaje, MAX_BUFFER, "%s|%d", path_query, prioridad);
 
-    send(socket_master, mensaje, strlen(mensaje), 0);
+    if (send(socket_master, mensaje, strlen(mensaje), 0) == -1)
+    {
+        perror("Error enviando query al Master");
+        log_error(logger, "Fallo al enviar la query al Master");
+        exit(EXIT_FAILURE);
+    }
+
     log_info(logger, "## Solicitud de ejecución de Query: %s, prioridad: %d", path_query, prioridad);
 }
 
@@ -18,7 +24,14 @@ void escuchar_respuestas_master(int socket_master, t_log *logger)
         memset(buffer, 0, MAX_BUFFER);
         int bytes_recibidos = recv(socket_master, buffer, MAX_BUFFER, 0);
 
-        if (bytes_recibidos <= 0)
+        if (bytes_recibidos == -1)
+        {
+            perror("Error recibiendo datos del Master");
+            log_error(logger, "Error en recv() desde el Master");
+            break;
+        }
+
+        if (bytes_recibidos == 0)
         {
             log_info(logger, "## Query Finalizada - Desconexión del Master");
             break;

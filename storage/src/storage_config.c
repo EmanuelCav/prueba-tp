@@ -22,3 +22,9 @@ t_storage_config *leer_config_storage(const char *path)
     config_destroy(cfg);
     return scfg;
 }
+
+void limpiar_recursos_storage(t_storage_config *cfg, t_log *logger)
+{
+    log_destroy(logger);
+    free(cfg);
+}

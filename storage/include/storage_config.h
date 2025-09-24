@@ -28,4 +28,12 @@ typedef struct
  */
 t_storage_config *leer_config_storage(const char *path);
 
+/**
+ * @brief Libera todos los recursos utilizados por el módulo Storage.
+ *
+ * @param cfg Puntero a la estructura de configuración del Storage.
+ * @param logger Puntero al logger del Storage.
+ */
+void limpiar_recursos_storage(t_storage_config *cfg, t_log *logger);
+
 #endif

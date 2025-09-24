@@ -15,6 +15,9 @@
         "storage_fs.h": "c",
         "storage.h": "c",
         "worker_conexiones.h": "c",
-        "storage_config.h": "c"
+        "storage_config.h": "c",
+        "worker_memoria_interna,h": "c",
+        "worker_memoria_interna.h": "c",
+        "storage_worker.h": "c"
     }
 }

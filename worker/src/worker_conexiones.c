@@ -1,12 +1,25 @@
 #include "../include/worker_conexiones.h"
 
-int conectar_al_master(t_worker_config *cfg, t_log *logger)
+int conectar_al_master(t_worker_config *cfg, t_log *logger, int worker_id)
 {
     char puerto_str[6];
     sprintf(puerto_str, "%d", cfg->puerto_master);
+
     int sock_master = conectar_servidor(cfg->ip_master, puerto_str);
-    send(sock_master, "WORKER", strlen("WORKER"), 0);
-    log_info(logger, "## Worker conectado al Master (%s:%s)", cfg->ip_master, puerto_str);
+    if (sock_master < 0)
+    {
+        log_error(logger, "No se pudo conectar al Master");
+        exit(EXIT_FAILURE);
+    }
+
+    if (send(sock_master, &worker_id, sizeof(int), 0) < 0)
+    {
+        log_error(logger, "No se pudo enviar el ID del Worker al Master");
+        exit(EXIT_FAILURE);
+    }
+
+    log_info(logger, "## Worker conectado al Master (%s:%s) con ID %d", cfg->ip_master, puerto_str, worker_id);
+
     return sock_master;
 }
 

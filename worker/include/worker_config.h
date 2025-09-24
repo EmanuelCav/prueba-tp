@@ -8,6 +8,8 @@
 #include <commons/config.h>
 #include <commons/log.h>
 
+#include "worker_memoria_interna.h"
+
 /**
  * @brief Estructura de configuración del Worker.
  *
@@ -40,6 +42,6 @@ t_worker_config *leer_config_worker(char *path_config);
 /**
  * @brief Libera recursos al finalizar la ejecución del Worker.
  */
-void limpiar_recursos_worker(int sock_master, t_worker_config *cfg, t_log *logger);
+void limpiar_recursos_worker(int sock_master, t_worker_config *cfg, t_log *logger, t_memoria_interna *memoria, char *line, FILE *f)
 
 #endif

@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 /**
- * @struct t_config_config
+ * @struct t_config_query
  * @brief Estructura que representa la configuración del módulo Query Control.
  */
 typedef struct
@@ -17,18 +17,18 @@ typedef struct
     char *ip_master;
     int puerto_master;
     char *log_level;
-} t_config_config;
+} t_config_query;
 
 /**
  * @brief Función para leer el archivo de configuración del módulo Query Control.
  *
  * @param path Ruta hacia el archivo de configuración.
- * @return t_config_config* Instancia creada e inicializada de la estructura de configuración.
+ * @return t_config_query* Instancia creada e inicializada de la estructura de configuración.
  *
  * @example
- * t_config_config *cfg = leer_config("./config/query_control.config");
+ * t_config_query *cfg = leer_config("./config/query_control.config");
  */
-t_config_config *leer_config(char *path);
+t_config_query *leer_config(char *path);
 
 /**
  * @brief Libera recursos y cierra las conexiones utilizadas por Query Control.
@@ -40,6 +40,6 @@ t_config_config *leer_config(char *path);
  * @example
  * limpiar_recursos(socket_master, logger, cfg);
  */
-void limpiar_recursos(int socket_master, t_log *logger, t_config_config *cfg);
+void limpiar_recursos_query(int socket_master, t_log *logger, t_config_query *cfg);
 
 #endif

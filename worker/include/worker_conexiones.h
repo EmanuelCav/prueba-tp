@@ -20,12 +20,13 @@
  *
  * @param cfg Configuración del Worker.
  * @param logger Logger para registrar la información de conexión.
+ * @param worker_id ID a fin de que el Master pueda identificarlo.
  * @return int Socket conectado al Master.
  *
  * @example
- * int sock_master = conectar_al_master(cfg, logger);
+ * int sock_master = conectar_al_master(cfg, logger, 1);
  */
-int conectar_al_master(t_worker_config *cfg, t_log *logger);
+int conectar_al_master(t_worker_config *cfg, t_log *logger, int worker_id);
 
 /**
  * @brief Recibe los datos de la Query enviada por el Master.

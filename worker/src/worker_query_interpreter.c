@@ -4,23 +4,59 @@ t_instruccion instr_to_enum(char *line)
 {
     char buffer[256];
     strcpy(buffer, line);
-    char * instruccion = strtok(buffer," ");
+    char *instruccion = strtok(buffer, " ");
 
-    if (strcmp(instruccion, "CREATE")== 0) {return INS_CREATE;}
-    else if (strcmp(instruccion, "TRUNCATE")== 0) {return INS_TRUNCATE;}
-    else if (strcmp(instruccion, "WRITE")== 0) {return INS_WRITE;}
-    else if (strcmp(instruccion, "READ")== 0) {return INS_READ;}
-    else if (strcmp(instruccion, "TAG")== 0) {return INS_TAG;}
-    else if (strcmp(instruccion, "COMMIT")== 0) {return INS_COMMIT;}
-    else if (strcmp(instruccion, "FLUSH")== 0) {return INS_FLUSH;}
-    else if (strcmp(instruccion, "DELETE")== 0) {return INS_DELETE;}
-    else if (strcmp(instruccion, "END")== 0) {return INS_END;}
-    else {return INS_UNKNOWN;}
-    
+    if (strcmp(instruccion, "CREATE") == 0)
+    {
+        return INS_CREATE;
+    }
+    else if (strcmp(instruccion, "TRUNCATE") == 0)
+    {
+        return INS_TRUNCATE;
+    }
+    else if (strcmp(instruccion, "WRITE") == 0)
+    {
+        return INS_WRITE;
+    }
+    else if (strcmp(instruccion, "READ") == 0)
+    {
+        return INS_READ;
+    }
+    else if (strcmp(instruccion, "TAG") == 0)
+    {
+        return INS_TAG;
+    }
+    else if (strcmp(instruccion, "COMMIT") == 0)
+    {
+        return INS_COMMIT;
+    }
+    else if (strcmp(instruccion, "FLUSH") == 0)
+    {
+        return INS_FLUSH;
+    }
+    else if (strcmp(instruccion, "DELETE") == 0)
+    {
+        return INS_DELETE;
+    }
+    else if (strcmp(instruccion, "END") == 0)
+    {
+        return INS_END;
+    }
+    else
+    {
+        return INS_UNKNOWN;
+    }
 }
 
-void query_interpretar(char *line, int query_id, char *path_query, t_log *logger)
+void query_interpretar(char *line, int query_id, char *path_query, t_log *logger, t_memoria_interna *memoria)
 {
+
+    static int program_counter = 0; // Verificar de donde sale PC
+
+    log_info(logger, "## Query %d: FETCH - Program Counter: %d - %s",
+             query_id, program_counter, line);
+
+    program_counter++;
 
     switch (instr_to_enum(line))
     {
@@ -67,5 +103,4 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
     default:
         break;
     }
-
 }

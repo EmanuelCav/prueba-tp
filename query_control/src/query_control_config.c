@@ -1,6 +1,6 @@
 #include "../include/query_control_config.h"
 
-t_config_config *leer_config(char *path)
+t_config_query *leer_config(char *path)
 {
 
     t_config *config = config_create(path);
@@ -11,7 +11,7 @@ t_config_config *leer_config(char *path)
         exit(EXIT_FAILURE);
     }
 
-    t_config_config *cfg = malloc(sizeof(t_config_config));
+    t_config_query *cfg = malloc(sizeof(t_config_query));
 
     cfg->ip_master = strdup(config_get_string_value(config, "IP_MASTER"));
     cfg->puerto_master = config_get_int_value(config, "PUERTO_MASTER");
@@ -22,7 +22,7 @@ t_config_config *leer_config(char *path)
     return cfg;
 }
 
-void limpiar_recursos(int socket_master, t_log *logger, t_config_config *cfg)
+void limpiar_recursos_query(int socket_master, t_log *logger, t_config_query *cfg)
 {
     close(socket_master);
     log_destroy(logger);

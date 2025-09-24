@@ -20,6 +20,7 @@
 #include "worker_config.h"
 #include "worker_conexiones.h"
 #include "worker_query_interpreter.h"
+#include "worker_memoria_interna.h"
 
 t_log *logger;
 

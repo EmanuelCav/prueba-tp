@@ -5,6 +5,8 @@
 #include <commons/config.h>
 #include <commons/log.h>
 
+#include "worker_memoria_interna.h"
+
 typedef enum
 {
     INS_CREATE,
@@ -26,9 +28,10 @@ typedef enum
  * @param query_id Identificador de la query.
  * @param path_query Ruta al archivo de la query.
  * @param logger Logger para imprimir el seguimiento de ejecucion de la instruccion.
+ * @param logger Memoria interna.
  *
  */
-void query_interpretar(char *line,int query_id, char* path_query, t_log *logger);
+void query_interpretar(char *line, int query_id, char *path_query, t_log *logger, t_memoria_interna *memoria);
 
 /**
  * @brief Lee e interpreta line calificar la instruccion a realizar

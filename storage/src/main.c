@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
     t_storage_config *cfg = leer_config_storage(argv[1]);
     logger = log_create(STORAGE_LOG_PATH, STORAGE_MODULE_NAME, 1, log_level_from_string(cfg->log_level));
 
-    inicializar_fs(cfg);
+    inicializar_fs(cfg, logger);
 
     char puerto_str[6];
     sprintf(puerto_str, "%d", cfg->puerto_escucha);
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
         pthread_detach(tid);
     }
 
-    log_destroy(logger);
-    free(cfg);
+    limpiar_recursos_storage(cfg, logger);
+
     return 0;
 }
