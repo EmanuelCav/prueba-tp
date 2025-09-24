@@ -27,7 +27,7 @@ typedef enum
     CMD_END
 } comando_t;
 
-static int cantidad_workers = 0;
+int cantidad_workers = 0;
 pthread_mutex_t mutex_workers = PTHREAD_MUTEX_INITIALIZER;
 
 /**
