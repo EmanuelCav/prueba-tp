@@ -1,9 +1,8 @@
 #include "../include/storage_fs.h"
-#include <sys/mman.h>
-#include <fcntl.h>
 
 void inicializar_fs(t_storage_config *cfg, t_log *logger)
 {
+    print(cfg->fresh_start)
     if (cfg->fresh_start)
     {
         log_info(logger, "Inicializando FS desde cero (FRESH_START)");

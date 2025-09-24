@@ -11,7 +11,7 @@
 typedef struct
 {
     int puerto_escucha;
-    bool fresh_start;
+    int fresh_start;
     char punto_montaje[256];
     int retardo_operacion;
     int retardo_acceso_bloque;
