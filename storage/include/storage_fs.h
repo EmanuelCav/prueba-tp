@@ -27,14 +27,6 @@
 void inicializar_fs(t_storage_config *cfg, t_log *logger);
 
 /**
- * @brief Elimina el contenido previo del File System y crea la carpeta raíz.
- *
- * @param root_path Ruta raíz donde se montará el FS.
- * @param logger Puntero al logger del módulo.
- */
-void limpiar_fs(const char *root_path, t_log *logger);
-
-/**
  * @brief Crea las carpetas y archivos básicos del FS.
  *
  *
