@@ -24,7 +24,7 @@ void inicializar_fs(t_storage_config *cfg, t_log *logger)
 
 void limpiar_fs(const char *root_path, t_log *logger)
 {
-    char cmd[512];
+    char cmd[1024];
     snprintf(cmd, sizeof(cmd), "rm -rf %s", root_path);
     system(cmd);
     mkdir(root_path, 0777);
@@ -33,14 +33,14 @@ void limpiar_fs(const char *root_path, t_log *logger)
 
 void crear_estructura_base(const char *root_path, t_log *logger)
 {
-    char path_metadata[512], path_files[512];
+    char path_metadata[1024], path_files[1024];
     snprintf(path_metadata, sizeof(path_metadata), "%s/physical_blocks", root_path);
     snprintf(path_files, sizeof(path_files), "%s/files", root_path);
     mkdir(path_metadata, 0777);
     mkdir(path_files, 0777);
     log_info(logger, "Directorios creados: %s, %s", path_metadata, path_files);
 
-    char path_hash[512];
+    char path_hash[1024];
     snprintf(path_hash, sizeof(path_hash), "%s/blocks_hash_index.config", root_path);
     FILE *f = fopen(path_hash, "w");
     if (f)
@@ -52,7 +52,7 @@ void crear_estructura_base(const char *root_path, t_log *logger)
 
 void crear_superblock(const char *root_path, int fs_size, int block_size, t_log *logger)
 {
-    char path_superblock[512];
+    char path_superblock[1024];
     snprintf(path_superblock, sizeof(path_superblock), "%s/superblock.config", root_path);
     FILE *f = fopen(path_superblock, "w");
     if (!f) return;
@@ -63,7 +63,7 @@ void crear_superblock(const char *root_path, int fs_size, int block_size, t_log 
 
 void crear_bitmap(const char *root_path, int fs_size, int block_size, t_log *logger)
 {
-    char path_bitmap[512];
+    char path_bitmap[1024];
     snprintf(path_bitmap, sizeof(path_bitmap), "%s/bitmap.bin", root_path);
     int bitmap_fd = open(path_bitmap, O_CREAT | O_RDWR, 0666);
     int bloques = fs_size / block_size;
@@ -80,7 +80,7 @@ void crear_bitmap(const char *root_path, int fs_size, int block_size, t_log *log
 
 void crear_archivo_inicial(const char *root_path, int block_size, t_log *logger)
 {
-    char path_file[512], path_tag[512], path_logical[512];
+    char path_file[1024], path_tag[1024], path_logical[1024];
     snprintf(path_file, sizeof(path_file), "%s/files/initial_file", root_path);
     snprintf(path_tag, sizeof(path_tag), "%s/BASE", path_file);
     snprintf(path_logical, sizeof(path_logical), "%s/logical_blocks", path_tag);
@@ -90,7 +90,7 @@ void crear_archivo_inicial(const char *root_path, int block_size, t_log *logger)
     mkdir(path_logical, 0777);
     log_info(logger, "Directorios creados: %s, %s, %s", path_file, path_tag, path_logical);
 
-    char path_metadata_config[512];
+    char path_metadata_config[1024];
     snprintf(path_metadata_config, sizeof(path_metadata_config), "%s/metadata.config", path_tag);
     FILE *meta = fopen(path_metadata_config, "w");
     if (meta)
@@ -102,7 +102,7 @@ void crear_archivo_inicial(const char *root_path, int block_size, t_log *logger)
         log_info(logger, "Archivo metadata creado: %s", path_metadata_config);
     }
 
-    char path_block0[512];
+    char path_block0[1024];
     snprintf(path_block0, sizeof(path_block0), "%s/physical_blocks/block0000.dat", root_path);
     FILE *blk = fopen(path_block0, "w");
     if (blk)
@@ -113,7 +113,7 @@ void crear_archivo_inicial(const char *root_path, int block_size, t_log *logger)
         log_info(logger, "Bloque físico creado: %s", path_block0);
     }
 
-    char path_logical_block0[512];
+    char path_logical_block0[1024];
     snprintf(path_logical_block0, sizeof(path_logical_block0), "%s/logical_blocks/block0000.dat", path_tag);
     link(path_block0, path_logical_block0);
     log_info(logger, "Bloque lógico enlazado: %s -> %s", path_logical_block0, path_block0);
