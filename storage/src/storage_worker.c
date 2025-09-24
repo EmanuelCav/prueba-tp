@@ -7,25 +7,25 @@ pthread_mutex_t mutex_workers = PTHREAD_MUTEX_INITIALIZER;
 
 comando_t parse_comando(const char *cmd)
 {
-    if (strncmp(cmd, "GET_BLOCK_SIZE") == 0)
+    if (strcmp(cmd, "GET_BLOCK_SIZE") == 0)
         return CMD_GET_BLOCK_SIZE;
-    if (strncmp(cmd, "GET_FS_SIZE") == 0)
+    if (strcmp(cmd, "GET_FS_SIZE") == 0)
         return CMD_GET_FS_SIZE;
-    if (strncmp(cmd, "CREATE") == 0)
+    if (strcmp(cmd, "CREATE") == 0)
         return CMD_CREATE;
-    if (strncmp(cmd, "TRUNCATE") == 0)
+    if (strcmp(cmd, "TRUNCATE") == 0)
         return CMD_TRUNCATE;
-    if (strncmp(cmd, "WRITE") == 0)
+    if (strcmp(cmd, "WRITE") == 0)
         return CMD_WRITE;
-    if (strncmp(cmd, "READ") == 0)
+    if (strcmp(cmd, "READ") == 0)
         return CMD_READ;
-    if (strncmp(cmd, "TAG") == 0)
+    if (strcmp(cmd, "TAG") == 0)
         return CMD_TAG;
-    if (strncmp(cmd, "COMMIT") == 0)
+    if (strcmp(cmd, "COMMIT") == 0)
         return CMD_COMMIT;
-    if (strncmp(cmd, "DELETE") == 0)
+    if (strcmp(cmd, "DELETE") == 0)
         return CMD_DELETE;
-    if (strncmp(cmd, "END") == 0)
+    if (strcmp(cmd, "END") == 0)
         return CMD_END;
     return CMD_UNKNOWN;
 }
