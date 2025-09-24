@@ -30,16 +30,18 @@ void inicializar_fs(t_storage_config *cfg, t_log *logger);
  * @brief Elimina el contenido previo del File System y crea la carpeta raíz.
  *
  * @param root_path Ruta raíz donde se montará el FS.
+ * @param logger Puntero al logger del módulo.
  */
-void limpiar_fs(const char *root_path);
+void limpiar_fs(const char *root_path, t_log *logger);
 
 /**
  * @brief Crea las carpetas y archivos básicos del FS.
  *
  *
  * @param root_path Ruta raíz donde se montará el FS.
+ * @param logger Puntero al logger del módulo.
  */
-void crear_estructura_base(const char *root_path);
+void crear_estructura_base(const char *root_path, t_log *logger);
 
 /**
  * @brief Crea el archivo superblock de configuración del FS.
@@ -47,8 +49,9 @@ void crear_estructura_base(const char *root_path);
  * @param root_path Ruta raíz del FS.
  * @param fs_size Tamaño total del File System en bytes.
  * @param block_size Tamaño de cada bloque en bytes.
+ * @param logger Puntero al logger del módulo.
  */
-void crear_superblock(const char *root_path, int fs_size, int block_size);
+void crear_superblock(const char *root_path, int fs_size, int block_size, t_log *logger);
 
 /**
  * @brief Crea el archivo de bitmap del FS.
@@ -56,8 +59,9 @@ void crear_superblock(const char *root_path, int fs_size, int block_size);
  * @param root_path Ruta raíz del FS.
  * @param fs_size Tamaño total del File System en bytes.
  * @param block_size Tamaño de cada bloque en bytes.
+ * @param logger Puntero al logger del módulo.
  */
-void crear_bitmap(const char *root_path, int fs_size, int block_size);
+void crear_bitmap(const char *root_path, int fs_size, int block_size, t_log *logger);
 
 /**
  * @brief Crea un archivo inicial en el FS con un bloque físico y lógico.

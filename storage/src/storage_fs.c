@@ -6,17 +6,17 @@ void inicializar_fs(t_storage_config *cfg, t_log *logger)
     {
         log_info(logger, "Inicializando FS desde cero (FRESH_START)");
 
-        limpiar_fs(cfg->root_path, logger);
-        crear_estructura_base(cfg->root_path, logger);
-        crear_superblock(cfg->root_path, cfg->fs_size, cfg->block_size, logger);
-        crear_bitmap(cfg->root_path, cfg->fs_size, cfg->block_size, logger);
-        crear_archivo_inicial(cfg->root_path, cfg->block_size, logger);
+        limpiar_fs("./", logger);
+        crear_estructura_base("./", logger);
+        crear_superblock("./", cfg->fs_size, cfg->block_size, logger);
+        crear_bitmap("./", cfg->fs_size, cfg->block_size, logger);
+        crear_archivo_inicial("./", cfg->block_size, logger);
 
-        log_info(logger, "FS inicializado correctamente en %s", cfg->root_path);
+        log_info(logger, "FS inicializado correctamente en %s", "./");
     }
     else
     {
-        log_info(logger, "Cargando FS existente desde %s", cfg->root_path);
+        log_info(logger, "Cargando FS existente desde %s", "./");
     }
 }
 
@@ -41,7 +41,8 @@ void crear_estructura_base(const char *root_path, t_log *logger)
     char path_hash[256];
     sprintf(path_hash, "%s/blocks_hash_index.config", root_path);
     FILE *f = fopen(path_hash, "w");
-    if (f) {
+    if (f)
+    {
         fclose(f);
         log_info(logger, "Archivo creado: %s", path_hash);
     }
