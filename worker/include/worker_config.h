@@ -42,6 +42,6 @@ t_worker_config *leer_config_worker(char *path_config);
 /**
  * @brief Libera recursos al finalizar la ejecución del Worker.
  */
-void limpiar_recursos_worker(int sock_master, t_worker_config *cfg, t_log *logger, t_memoria_interna *memoria, char *line, FILE *f)
+void limpiar_recursos_worker(int sock_master, t_worker_config *cfg, t_log *logger, t_memoria_interna *memoria, char *line, FILE *f);
 
 #endif
