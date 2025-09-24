@@ -27,8 +27,8 @@ typedef enum
     CMD_END
 } comando_t;
 
-int cantidad_workers = 0;
-pthread_mutex_t mutex_workers = PTHREAD_MUTEX_INITIALIZER;
+extern int cantidad_workers;
+extern pthread_mutex_t mutex_workers;
 
 /**
  * @brief Función que maneja la comunicación con un Worker conectado al Master.
