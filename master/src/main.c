@@ -55,9 +55,13 @@ int main(int argc, char *argv[])
         }
         else
         {
+
+            int query_id_sender;
             char path_query[512];
             int prioridad;
-            sscanf(buffer, "%[^|]|%d", path_query, &prioridad);
+
+            sscanf(buffer, "%d|%[^|]|%d", &query_id_sender, path_query, &prioridad);
+
             int query_id = query_id_counter++;
 
             t_query *query = query_create(query_id, prioridad, path_query);
