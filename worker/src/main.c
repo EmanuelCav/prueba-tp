@@ -26,10 +26,13 @@ int main(int argc, char *argv[])
     recibir_query(sock_master, &query_id, path_query, &prioridad, logger);
     consultar_storage(cfg, logger, query_id);
 
-    FILE *f = fopen(path_query, "r");
+    char full_path[1024];
+    snprintf(full_path, sizeof(full_path), "../../query_control/%s", path_query);
+
+    FILE *f = fopen(full_path, "r");
     if (!f)
     {
-        log_error(logger, "Worker: no se pudo abrir el archivo de la query: %s", path_query);
+        log_error(logger, "Worker: no se pudo abrir el archivo de la query: %s", full_path);
     }
 
     char *line = NULL;

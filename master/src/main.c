@@ -45,9 +45,6 @@ int main(int argc, char *argv[])
         }
         buffer[bytes] = '\0';
 
-        // DEBUG opcional: logear lo que llegó (ayuda para probar)
-        log_info(logger, "Master: recibí handshake/raw: '%s'", buffer);
-
         if (strncmp(buffer, "WORKER", 6) == 0)
         {
             int worker_id;
