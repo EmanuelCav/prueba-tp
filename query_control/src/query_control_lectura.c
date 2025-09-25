@@ -1,18 +1,17 @@
 #include "../include/query_control_lectura.h"
 
-void enviar_solicitud_query(int socket_master, char *path_query, int prioridad, t_log *logger)
+void enviar_solicitud_query(int sock_master, char *archivo_query, int prioridad, t_log *logger)
 {
-    char mensaje[MAX_BUFFER];
-    snprintf(mensaje, MAX_BUFFER, "%s|%d", path_query, prioridad);
+    char buffer[MAX_BUFFER];
+    sprintf(buffer, "0|%s|%d", archivo_query, prioridad);
 
-    if (send(socket_master, mensaje, strlen(mensaje), 0) == -1)
+    if (send(sock_master, buffer, strlen(buffer), 0) < 0)
     {
-        perror("Error enviando query al Master");
-        log_error(logger, "Fallo al enviar la query al Master");
+        log_error(logger, "Error enviando solicitud de query al Master");
         exit(EXIT_FAILURE);
     }
 
-    log_info(logger, "## Solicitud de ejecución de Query: %s, prioridad: %d", path_query, prioridad);
+    log_info(logger, "Query enviada al Master: %s (prioridad %d)", archivo_query, prioridad);
 }
 
 void escuchar_respuestas_master(int socket_master, t_log *logger)
