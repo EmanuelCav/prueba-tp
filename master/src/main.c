@@ -45,9 +45,16 @@ int main(int argc, char *argv[])
         }
         buffer[bytes] = '\0';
 
+        // DEBUG opcional: logear lo que llegó (ayuda para probar)
+        log_info(logger, "Master: recibí handshake/raw: '%s'", buffer);
+
         if (strncmp(buffer, "WORKER", 6) == 0)
         {
-            registrar_worker(newfd, logger);
+            int worker_id;
+            sscanf(buffer, "WORKER|%d", &worker_id);
+
+            registrar_worker(newfd, logger, worker_id);
+            log_info(logger, "Master: registrado Worker ID %d (fd %d)", worker_id, newfd);
         }
         else
         {

@@ -12,13 +12,23 @@ int conectar_al_master(t_worker_config *cfg, t_log *logger, int worker_id)
         exit(EXIT_FAILURE);
     }
 
-    if (send(sock_master, &worker_id, sizeof(int), 0) < 0)
-    {
-        log_error(logger, "No se pudo enviar el ID del Worker al Master");
+    char workerSendId[64];
+    int len = snprintf(workerSendId, sizeof(workerSendId), "WORKER|%d\n", worker_id);
+    if (len < 0 || len >= (int)sizeof(workerSendId)) {
+        log_error(logger, "Error creando workerSendId");
+        close(sock_master);
         exit(EXIT_FAILURE);
     }
 
-    log_info(logger, "## Worker conectado al Master (%s:%s) con ID %d", cfg->ip_master, puerto_str, worker_id);
+    if (send(sock_master, workerSendId, len, 0) < 0)
+    {
+        log_error(logger, "No se pudo enviar el workerSendId al Master");
+        close(sock_master);
+        exit(EXIT_FAILURE);
+    }
+
+    log_info(logger, "## Worker conectado al Master (%s:%s) con ID %d",
+             cfg->ip_master, puerto_str, worker_id);
 
     return sock_master;
 }
