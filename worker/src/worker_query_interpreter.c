@@ -48,7 +48,7 @@ t_instruccion instr_to_enum(char *line)
     }
 }
 
-void query_interpretar(char *line, int query_id, char *full_path, t_log *logger, t_memoria_interna *memoria)
+void query_interpretar(char *line, int query_id, char *path_query, t_log *logger, t_memoria_interna *memoria)
 {
 
     static int program_counter = 0; // Verificar de donde sale PC
@@ -97,7 +97,7 @@ void query_interpretar(char *line, int query_id, char *full_path, t_log *logger,
         break;
 
     case INS_UNKNOWN:
-        log_error(logger, "Query: %d, File: %s instruccion desconocida", query_id, full_path);
+        log_error(logger, "Query: %d, File: %s instruccion desconocida", query_id, path_query);
         break;
 
     default:
