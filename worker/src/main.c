@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     consultar_storage(cfg, logger, query_id);
 
     char full_path[1024];
-    snprintf(full_path, sizeof(full_path), "../../query_control/%s", path_query);
+    snprintf(full_path, sizeof(full_path), "../query_control/%s", path_query);
 
     FILE *f = fopen(full_path, "r");
     if (!f)
