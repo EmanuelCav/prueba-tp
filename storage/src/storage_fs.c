@@ -2,7 +2,6 @@
 
 void inicializar_fs(t_storage_config *cfg, t_log *logger)
 {
-    log_info(logger, "FS inicializado correctamente en %s", "./");
     if (cfg->fresh_start)
     {
         log_info(logger, "Inicializando FS desde cero (FRESH_START)");

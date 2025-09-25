@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
         }
         buffer[bytes] = '\0';
 
-        if (strcmp(buffer, "WORKER") == 0)
+        if (strncmp(buffer, "WORKER", 6) == 0)
         {
             registrar_worker(newfd, logger);
         }
@@ -63,10 +63,10 @@ int main(int argc, char *argv[])
                      path_query, prioridad, query_id, cantidad_workers);
 
             queue_push(ready, query);
-            enviar_query_worker(ready,exec, logger);
+            enviar_query_worker(ready, exec, logger);
         }
     }
-    queue_destroy_and_destroy_elements(ready,query_destroy);
+    queue_destroy_and_destroy_elements(ready, query_destroy);
     list_destroy_and_destroy_elements(exec, query_destroy);
     log_destroy(logger);
     free(cfg);
