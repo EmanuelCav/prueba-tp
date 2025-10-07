@@ -13,7 +13,6 @@ t_query *query_create(int query_id, int prioridad, char *path_query)
 void query_destroy(void *arg)
 {
     t_query *query = (t_query *)arg;
-    free(arg);
     free(query->path_query);
     free(query);
 }

@@ -11,7 +11,6 @@ typedef struct
     int query_id;
     int prioridad;
     char* path_query;
-
 } t_query;
 
 /**

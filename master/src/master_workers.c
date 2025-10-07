@@ -1,8 +1,5 @@
 #include "../include/master_workers.h"
 
-t_worker workers[MAX_WORKERS];
-int cantidad_workers = 0;
-
 void registrar_worker(int socket, t_log *logger, int worker_id)
 {
     if (cantidad_workers >= MAX_WORKERS)

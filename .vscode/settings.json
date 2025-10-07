@@ -18,6 +18,11 @@
         "storage_config.h": "c",
         "worker_memoria_interna,h": "c",
         "worker_memoria_interna.h": "c",
-        "storage_worker.h": "c"
+        "storage_worker.h": "c",
+        "worker.h": "c",
+        "errno.h": "c",
+        "master_queues.h": "c",
+        "master_workers.h": "c",
+        "master_desconexiones.h": "c"
     }
 }
