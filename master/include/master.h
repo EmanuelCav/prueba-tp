@@ -26,7 +26,4 @@
 #define MASTER_LOG_PATH "./logs/master.log"
 #define MASTER_MODULE_NAME "MASTER"
 
-extern pthread_mutex_t mutex_ready;
-extern pthread_mutex_t mutex_exec;
-
 #endif
