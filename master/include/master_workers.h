@@ -14,16 +14,16 @@ typedef struct {
     bool ocupado;
 } t_worker;
 
-extern t_worker workers[MAX_WORKERS];
-extern int cantidad_workers;
-extern t_log *logger;
-extern t_queue *ready;
-extern t_list *exec;
-extern t_list *query_controls;
+// extern t_worker workers[MAX_WORKERS];
+// extern int cantidad_workers;
+// extern t_log *logger;
+// extern t_queue *ready;
+// extern t_list *exec;
+// extern t_list *query_controls;
 
-extern pthread_mutex_t mutex_ready;
-extern pthread_mutex_t mutex_exec;
-extern pthread_mutex_t mutex_query_controls;
+// extern pthread_mutex_t mutex_ready;
+// extern pthread_mutex_t mutex_exec;
+// extern pthread_mutex_t mutex_query_controls;
 
 /**
  * @brief Registra un nuevo Worker en la lista global
