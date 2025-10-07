@@ -21,17 +21,15 @@ t_list *query_controls;
  * @brief Maneja la desconexión de un Worker.
  *
  * @param socket Socket del Worker que se desconectó.
- * @param logger Logger utilizado para registrar el evento.
  */
-void desconectar_worker(int socket, t_log *logger);
+void desconectar_worker(int socket);
 
 /**
  * @brief Maneja la desconexión de un Query Control.
  *
  * @param qc Puntero a la estructura del Query Control que se desconecta.
- * @param logger Logger utilizado para registrar el evento.
  */
-void desconectar_query_control(t_query_control_activo *qc, t_log *logger);
+void desconectar_query_control(t_query_control_activo *qc);
 
 /**
  * @brief Atiende una conexión entrante (Worker o Query Control).

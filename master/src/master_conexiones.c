@@ -1,6 +1,6 @@
 #include "../include/master_conexiones.h"
 
-void desconectar_worker(int socket, t_log *logger)
+void desconectar_worker(int socket)
 {
     for (int i = 0; i < cantidad_workers; i++)
     {
@@ -20,7 +20,7 @@ void desconectar_worker(int socket, t_log *logger)
     }
 }
 
-void desconectar_query_control(t_query_control_activo *qc, t_log *logger)
+void desconectar_query_control(t_query_control_activo *qc)
 {
     log_info(logger,
              "## Se desconecta un Query Control. Se finaliza la Query %d con prioridad %d. Nivel multiprocesamiento %d",
