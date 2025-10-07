@@ -23,6 +23,7 @@
         "errno.h": "c",
         "master_queues.h": "c",
         "master_workers.h": "c",
-        "master_desconexiones.h": "c"
+        "master_desconexiones.h": "c",
+        "master_conexiones.h": "c"
     }
 }
