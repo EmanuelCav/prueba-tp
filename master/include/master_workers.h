@@ -29,6 +29,7 @@ t_list *exec;
 
 pthread_mutex_t mutex_ready = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_exec = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_query_controls = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * @brief Registra un nuevo Worker en la lista global

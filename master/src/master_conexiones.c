@@ -114,7 +114,9 @@ void *atender_conexion(void *arg)
         strcpy(qc->path, path_query);
         qc->activo = true;
 
+        pthread_mutex_lock(&mutex_query_controls);
         list_add(query_controls, qc);
+        pthread_mutex_unlock(&mutex_query_controls);
 
         log_info(logger,
                  "## Se conecta un Query Control para ejecutar la Query %s con prioridad %d - Id asignado: %d. Nivel multiprocesamiento %d",
