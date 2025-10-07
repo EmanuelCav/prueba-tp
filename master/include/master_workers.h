@@ -26,6 +26,7 @@ extern int cantidad_workers;
 extern t_log *logger;
 extern t_queue *ready;
 extern t_list *exec;
+extern t_list *query_controls;
 
 extern pthread_mutex_t mutex_ready;
 extern pthread_mutex_t mutex_exec;

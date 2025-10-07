@@ -15,8 +15,6 @@ typedef struct
     bool activo;
 } t_query_control_activo;
 
-extern t_list *query_controls;
-
 /**
  * @brief Maneja la desconexión de un Worker.
  *
