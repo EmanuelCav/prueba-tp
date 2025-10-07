@@ -7,7 +7,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <pthread.h>
 #include <commons/log.h>
+
 #include "../include/master_queues.h"
 
 #define MAX_WORKERS 50
