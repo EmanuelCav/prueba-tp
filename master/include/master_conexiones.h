@@ -3,6 +3,8 @@
 
 #include "master_workers.h"
 
+#define MAX_BUFFER 1024
+
 /**
  * @brief Estructura que representa un Query Control activo conectado al Master.
  */

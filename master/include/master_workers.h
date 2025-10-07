@@ -1,21 +1,14 @@
+// master_workers.h
 #ifndef MASTER_WORKERS_H
 #define MASTER_WORKERS_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <unistd.h>
 #include <pthread.h>
-#include <sys/socket.h>
 #include <commons/log.h>
-#include "../include/master_queues.h"
+#include "master_queues.h"
 
 #define MAX_WORKERS 50
-#define MAX_BUFFER 1024
 
-typedef struct
-{
+typedef struct {
     int socket;
     int worker_id;
     bool ocupado;
