@@ -1,5 +1,16 @@
 #include "../include/master_workers.h"
 
+t_worker workers[MAX_WORKERS];
+int cantidad_workers = 0;
+t_log *logger;
+t_queue *ready;
+t_list *exec;
+t_list *query_controls;
+
+pthread_mutex_t mutex_ready = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_exec = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_query_controls = PTHREAD_MUTEX_INITIALIZER;
+
 void registrar_worker(int socket, t_log *logger, int worker_id)
 {
     if (cantidad_workers >= MAX_WORKERS)
