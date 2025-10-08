@@ -17,6 +17,12 @@ typedef struct
     bool activo;
 } t_query_control_activo;
 
+extern pthread_mutex_t mutex_ready;
+extern pthread_mutex_t mutex_exec;
+extern pthread_mutex_t mutex_query_controls;
+
+extern t_list *query_controls;
+
 /**
  * @brief Maneja la desconexión de un Worker.
  *

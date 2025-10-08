@@ -1,5 +1,12 @@
 #include "../include/master_conexiones.h"
 
+
+t_list *query_controls;
+
+pthread_mutex_t mutex_ready = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_exec = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_query_controls = PTHREAD_MUTEX_INITIALIZER;
+
 void desconectar_worker(int socket)
 {
     for (int i = 0; i < cantidad_workers; i++)
