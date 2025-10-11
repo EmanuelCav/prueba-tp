@@ -59,7 +59,6 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
 
     char buffer[512];
     strcpy(buffer, line);
-    char *instruccion = strtok(buffer, " ");
     char *params = strtok(NULL, "");
 
     char file[64], tag[64];
