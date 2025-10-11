@@ -1,1 +1,23 @@
-Hello world
+CREATE datos_ventas:ver1
+WRITE datos_ventas:ver1 0 ProductoA,100,25.5
+READ datos_ventas:ver1 0 20
+TRUNCATE datos_ventas:ver1 64
+TAG datos_ventas:ver1 ventas_backup:ver_copia
+WRITE ventas_backup:ver_copia 32 ProductoB,50,10.0
+READ ventas_backup:ver_copia 0 32
+FLUSH ventas_backup:ver_copia
+COMMIT ventas_backup:ver_copia
+DELETE datos_ventas:ver1
+CREATE empleados:junio
+WRITE empleados:junio 0 Juan,25,Analista
+WRITE empleados:junio 64 Maria,30,Tester
+READ empleados:junio 0 64
+FLUSH empleados:junio
+COMMIT empleados:junio
+CREATE logs_sistema:main
+TRUNCATE logs_sistema:main 128
+WRITE logs_sistema:main 0 Error404,WarningDisk
+TAG logs_sistema:main backup_logs:respaldo1
+FLUSH backup_logs:respaldo1
+DELETE logs_sistema:main
+END
