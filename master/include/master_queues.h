@@ -11,7 +11,8 @@
 
 #include "master_config.h"
 
-typedef struct {
+typedef struct
+{
     int query_id;
     int prioridad;
     char *path_query;
@@ -35,5 +36,15 @@ t_query *query_create(int query_id, int prioridad, char *path_query);
  * @brief Elimina una query
  */
 void query_destroy(void *query);
+
+/**
+ * @brief Compara las prioridades de dos queries.
+ */
+bool comparar_prioridades(void *a, void *b);
+
+/**
+ * @brief Ordena la cola READY según las prioridades de las queries.
+ */
+void ordenar_ready_por_prioridad(t_queue *ready);
 
 #endif

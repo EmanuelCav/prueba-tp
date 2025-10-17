@@ -102,15 +102,13 @@ void desconectar_query_control(t_query_control_activo *qc)
 
     pthread_mutex_lock(&mutex_ready);
 
-    t_query *query_ready = NULL;
     t_queue *temp_queue = queue_create();
-    
+
     while (!queue_is_empty(ready))
     {
         t_query *temp_query = queue_pop(ready);
         if (temp_query->query_id == qc->query_id)
         {
-            query_ready = temp_query;
             query_destroy(temp_query);
             log_info(logger, "## Query %d cancelada desde estado READY", qc->query_id);
         }
