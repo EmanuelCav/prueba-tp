@@ -35,5 +35,6 @@ void ordenar_ready_por_prioridad(t_queue *ready)
     list_sort(lista_temp, comparar_prioridades);
     for (int i = 0; i < list_size(lista_temp); i++)
         queue_push(ready, list_get(lista_temp, i));
+        
     list_destroy(lista_temp);
 }

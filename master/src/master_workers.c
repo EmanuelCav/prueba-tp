@@ -93,6 +93,7 @@ void enviar_query_worker(t_queue *ready, t_list *exec, t_log *logger)
             }
         }
     }
+    
 
     log_info(logger, "## No hay Workers libres ni Querys con menor prioridad para desalojar");
 }

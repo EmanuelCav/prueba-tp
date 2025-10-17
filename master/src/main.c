@@ -17,6 +17,7 @@ int main(int argc, char *argv[])
     char puerto_str[6];
     sprintf(puerto_str, "%d", cfg->puerto_escucha);
     int listener = iniciar_servidor(puerto_str);
+    
     log_info(logger, "## Master escuchando en puerto %d con algoritmo %s",
              cfg->puerto_escucha, cfg->algoritmo_planificacion);
 

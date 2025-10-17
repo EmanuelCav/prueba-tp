@@ -101,8 +101,10 @@ void desconectar_query_control(t_query_control_activo *qc)
     qc->activo = false;
 
     pthread_mutex_lock(&mutex_ready);
+
     t_query *query_ready = NULL;
     t_queue *temp_queue = queue_create();
+    
     while (!queue_is_empty(ready))
     {
         t_query *temp_query = queue_pop(ready);

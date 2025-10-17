@@ -2,6 +2,7 @@
 
 void *aplicar_aging(void *arg)
 {
+    
     t_config_master *cfg = (t_config_master *)arg;
 
     while (1)

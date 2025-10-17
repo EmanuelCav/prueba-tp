@@ -14,5 +14,6 @@ t_config_master *master_leer_config(const char *path)
     conf->tiempo_aging = config_get_int_value(cfg, "TIEMPO_AGING");
     strcpy(conf->log_level, config_get_string_value(cfg, "LOG_LEVEL"));
     config_destroy(cfg);
+    
     return conf;
 }
