@@ -4,14 +4,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <time.h>
+#include <commons/config.h>
 #include <commons/collections/queue.h>
 
-typedef struct
-{
+#include "master_config.h"
+
+typedef struct {
     int query_id;
     int prioridad;
-    char* path_query;
+    char *path_query;
+    int worker_id;
+    int program_counter;
+    uint64_t timestamp_ready;
 } t_query;
+
+extern t_config_master *cfg;
 
 /**
  * @brief Crear una query para la queue

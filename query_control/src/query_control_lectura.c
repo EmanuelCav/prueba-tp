@@ -11,7 +11,7 @@ void enviar_solicitud_query(int sock_master, char *archivo_query, int prioridad,
         exit(EXIT_FAILURE);
     }
 
-    log_info(logger, "Query enviada al Master: %s (prioridad %d)", archivo_query, prioridad);
+    log_info(logger, "## Solicitud de ejecución de Query: %s, prioridad: %d", archivo_query, prioridad);
 }
 
 void escuchar_respuestas_master(int socket_master, t_log *logger)
@@ -39,14 +39,19 @@ void escuchar_respuestas_master(int socket_master, t_log *logger)
         if (string_starts_with(buffer, "READ"))
         {
             char **partes = string_split(buffer, "|");
-            log_info(logger, "## Lectura realizada: Archivo <%s>, contenido: <%s>", partes[1], partes[2]);
+            log_info(logger, "## Lectura realizada: File <%s>, contenido: <%s>", partes[1], partes[2]);
 
             string_iterate_lines(partes, (void *)free);
             free(partes);
         }
         else if (string_starts_with(buffer, "END"))
         {
-            log_info(logger, "## Query Finalizada - %s", buffer + 4);
+            char **partes = string_split(buffer, "|");
+            char *motivo = partes[1] ? partes[1] : "Finalización normal";
+            log_info(logger, "## Query Finalizada - %s", motivo);
+            
+            string_iterate_lines(partes, (void *)free);
+            free(partes);
             break;
         }
     }

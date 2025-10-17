@@ -42,4 +42,9 @@ void registrar_worker(int socket, t_log *logger, int worker_id);
  */
 void enviar_query_worker(t_queue *ready, t_list *exec, t_log *logger);
 
+/**
+ * @brief Limpieza de recursos en master
+ */
+void limpiar_recursos_master(int listener, t_config_master *cfg, t_log *logger);
+
 #endif

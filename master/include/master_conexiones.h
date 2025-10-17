@@ -20,6 +20,7 @@ typedef struct
 extern pthread_mutex_t mutex_ready;
 extern pthread_mutex_t mutex_exec;
 extern pthread_mutex_t mutex_query_controls;
+extern int query_id_counter;
 
 extern t_list *query_controls;
 

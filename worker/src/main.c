@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
         {
             line[read - 1] = '\0';
         }
-        query_interpretar(line, query_id, path_query, logger, memoria);
+        query_interpretar(line, query_id, path_query, logger, memoria, cfg, sock_master);
 
         read = getline(&line, &len, f);
     }

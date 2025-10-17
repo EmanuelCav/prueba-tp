@@ -22,27 +22,87 @@ void registrar_worker(int socket, t_log *logger, int worker_id)
 
 void enviar_query_worker(t_queue *ready, t_list *exec, t_log *logger)
 {
+    if (queue_is_empty(ready))
+        return;
+
+    if (strcmp(cfg->algoritmo_planificacion, "PRIORIDADES") == 0)
+        ordenar_ready_por_prioridad(ready);
+
     for (int i = 0; i < cantidad_workers; i++)
     {
         if (!workers[i].ocupado && !queue_is_empty(ready))
         {
             t_query *query_pop = queue_pop(ready);
+            query_pop->worker_id = workers[i].worker_id;
             char mensaje[512];
             sprintf(mensaje, "%d|%s|%d", query_pop->query_id, query_pop->path_query, query_pop->prioridad);
             send(workers[i].socket, mensaje, strlen(mensaje), 0);
             workers[i].ocupado = true;
             list_add(exec, query_pop);
-
-            log_info(logger, "## Se envía la Query %d al Worker %d", query_pop->query_id, workers[i].worker_id);
+            log_info(logger, "## Se envía la Query %d (%d) al Worker %d",
+                     query_pop->query_id, query_pop->prioridad, workers[i].worker_id);
             return;
         }
     }
-    if (queue_is_empty(ready))
+
+    if (strcmp(cfg->algoritmo_planificacion, "PRIORIDADES") == 0)
     {
-        printf("No hay querys en espera\n");
+        t_query *query_ready = queue_peek(ready);
+        t_query *query_baja = NULL;
+        int index_baja = -1;
+
+        for (int i = 0; i < list_size(exec); i++)
+        {
+            t_query *q = list_get(exec, i);
+            if (!query_baja || q->prioridad > query_baja->prioridad)
+            {
+                query_baja = q;
+                index_baja = i;
+            }
+        }
+
+        if (query_baja && query_ready->prioridad < query_baja->prioridad)
+        {
+            for (int i = 0; i < cantidad_workers; i++)
+            {
+                if (workers[i].worker_id == query_baja->worker_id)
+                {
+                    char msg[64];
+                    sprintf(msg, "DESALOJAR|%d", query_baja->query_id);
+                    send(workers[i].socket, msg, strlen(msg), 0);
+
+                    log_info(logger, "## Se desaloja la Query %d (%d) del Worker %d - Motivo: PRIORIDAD",
+                             query_baja->query_id, query_baja->prioridad, workers[i].worker_id);
+
+                    query_baja->program_counter += 10;
+
+                    list_remove(exec, index_baja);
+                    workers[i].ocupado = false;
+
+                    t_query *query_alta = queue_pop(ready);
+                    query_alta->worker_id = workers[i].worker_id;
+                    sprintf(msg, "%d|%s|%d", query_alta->query_id, query_alta->path_query, query_alta->prioridad);
+                    send(workers[i].socket, msg, strlen(msg), 0);
+                    workers[i].ocupado = true;
+                    list_add(exec, query_alta);
+
+                    log_info(logger, "## Se envía la Query %d (prioridad %d) al Worker %d tras desalojo",
+                             query_alta->query_id, query_alta->prioridad, workers[i].worker_id);
+                    return;
+                }
+            }
+        }
     }
-    else
-    {
-        printf("No hay Workers disponibles\n");
-    }
+
+    log_info(logger, "## No hay Workers libres ni Querys con menor prioridad para desalojar");
+}
+
+void limpiar_recursos_master(int listener, t_config_master *cfg, t_log *logger)
+{
+    close(listener);
+    queue_destroy_and_destroy_elements(ready, query_destroy);
+    list_destroy_and_destroy_elements(exec, query_destroy);
+    list_destroy_and_destroy_elements(query_controls, free);
+    log_destroy(logger);
+    free(cfg);
 }
