@@ -271,6 +271,35 @@ void *atender_conexion(void *arg)
                 }
                 pthread_mutex_unlock(&mutex_query_controls);
             }
+            else if (strncmp(buffer, "DESALOJO_OK", 11) == 0)
+            {
+                int query_id, pc;
+                sscanf(buffer, "DESALOJO_OK|%d|%d", &query_id, &pc);
+
+                pthread_mutex_lock(&mutex_exec);
+                t_query *q = buscar_query_por_id(exec, query_id);
+                if (q)
+                {
+                    q->program_counter = pc;
+                    log_info(logger, "## Master: Query %d desalojada en PC=%d", query_id, pc);
+                    list_remove_element(exec, q);
+                    pthread_mutex_unlock(&mutex_exec);
+
+                    pthread_mutex_lock(&mutex_ready);
+                    queue_push(ready, q);
+                    pthread_mutex_unlock(&mutex_ready);
+
+                    pthread_mutex_lock(&mutex_ready);
+                    pthread_mutex_lock(&mutex_exec);
+                    enviar_query_worker(ready, exec, logger);
+                    pthread_mutex_unlock(&mutex_exec);
+                    pthread_mutex_unlock(&mutex_ready);
+                }
+                else
+                {
+                    pthread_mutex_unlock(&mutex_exec);
+                }
+            }
         }
     }
     else
@@ -324,4 +353,15 @@ void *atender_conexion(void *arg)
     }
 
     pthread_exit(NULL);
+}
+
+t_query *buscar_query_por_id(t_list *lista, int query_id)
+{
+    for (int i = 0; i < list_size(lista); i++)
+    {
+        t_query *q = list_get(lista, i);
+        if (q->query_id == query_id)
+            return q;
+    }
+    return NULL;
 }

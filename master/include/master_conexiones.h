@@ -46,4 +46,7 @@ void desconectar_query_control(t_query_control_activo *qc);
  */
 void *atender_conexion(void *arg);
 
+
+t_query *buscar_query_por_id(t_list *lista, int query_id);
+
 #endif

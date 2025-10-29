@@ -35,25 +35,25 @@ int conectar_al_master(t_worker_config *cfg, t_log *logger, int worker_id);
  * @param query_id Puntero para almacenar el ID de la query.
  * @param path_query Buffer para almacenar el path de la query.
  * @param prioridad Puntero para almacenar la prioridad de la query.
+ * @param program_counter Puntero para almacenar el program counter.
  * @param logger Logger para imprimir mensajes de información.
  *
  * @example
  * int query_id, prioridad;
  * char path_query[512];
- * recibir_query(sock_master, &query_id, path_query, &prioridad, logger);
+ * recibir_query(sock_master, &query_id, path_query, &prioridad, &program_counter, logger);
  */
-void recibir_query(int sock_master, int *query_id, char *path_query, int *prioridad, t_log *logger);
+void recibir_query(int sock_master, int *query_id, char *path_query, int *prioridad, int *program_counter, t_log *logger)
 
 /**
  * @brief Conecta al Storage y solicita información, por ejemplo, tamaño de bloque.
  *
  * @param cfg Configuración del Worker.
  * @param logger Logger para imprimir mensajes.
- * @param query_id ID de la query en ejecución.
  *
  * @example
- * consultar_storage(cfg, logger, query_id);
+ * consultar_storage(cfg, logger);
  */
-void consultar_storage(t_worker_config *cfg, t_log *logger, int query_id);
+int consultar_storage(t_worker_config *cfg, t_log *logger);
 
 #endif

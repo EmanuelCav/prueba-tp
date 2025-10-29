@@ -35,7 +35,7 @@ void enviar_query_worker(t_queue *ready, t_list *exec, t_log *logger)
             t_query *query_pop = queue_pop(ready);
             query_pop->worker_id = workers[i].worker_id;
             char mensaje[512];
-            sprintf(mensaje, "%d|%s|%d", query_pop->query_id, query_pop->path_query, query_pop->prioridad);
+            sprintf(mensaje, "%d|%s|%d|%d", query_pop->query_id, query_pop->path_query, query_pop->prioridad, query_pop->program_counter);
             send(workers[i].socket, mensaje, strlen(mensaje), 0);
             workers[i].ocupado = true;
             list_add(exec, query_pop);

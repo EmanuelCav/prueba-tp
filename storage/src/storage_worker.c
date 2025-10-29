@@ -72,8 +72,42 @@ void *manejar_worker(void *arg)
         break;
     }
     case CMD_CREATE:
-        send(client_sock, "OK", 2, 0);
-        log_info(logger, "##<QUERY_ID> - File Creado <NOMBRE_FILE>:<TAG>");
+        char file[64], tag[64];
+        int tamanio, query_id;
+        sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]|%d", &query_id, file, tag, &tamanio);
+
+        char path_file[4096];
+        snprintf(path_file, sizeof(path_file), "./files/%s", file);
+        mkdir(path_file, 0777);
+
+        char path_tag[4096];
+        snprintf(path_tag, sizeof(path_tag), "./files/%s/%s", file, tag);
+        mkdir(path_tag, 0777);
+
+        char path_logical[4096];
+        snprintf(path_logical, sizeof(path_logical), "./files/%s/%s/logical_blocks", file, tag);
+        mkdir(path_logical, 0777);
+
+        char path_metadata[4096];
+        snprintf(path_metadata, sizeof(path_metadata), "./files/%s/%s/metadata.config", file, tag);
+
+        FILE *meta = fopen(path_metadata, "w");
+        if (meta)
+        {
+            fprintf(meta, "TAMAÑO=%d\n", tamanio);
+            fprintf(meta, "BLOCKS=[0]\n");
+            fprintf(meta, "ESTADO=WORK_IN_PROGRESS\n");
+            fclose(meta);
+            log_info(logger, "Archivo metadata creado: %s", path_metadata);
+        }
+        else
+        {
+            log_error(logger, "Error creando metadata: %s", path_metadata);
+        }
+        char respuesta[512];
+        sprintf(respuesta, "OK|CREATE|%s|%s", file, tag);
+        send(client_sock, respuesta, sizeof(respuesta), 0);
+        log_info(logger, "##%d- File Creado %s:%s", query_id, file, tag);
         break;
     case CMD_TRUNCATE:
         send(client_sock, "OK", 2, 0);

@@ -4,7 +4,10 @@
 #include <string.h>
 #include <commons/config.h>
 #include <commons/log.h>
+#include <commons/string.h>
 #include <unistd.h>
+
+#include "../../utils/src/conexiones/conexiones.h"
 
 #include "worker_memoria_interna.h"
 #include "worker_config.h"
@@ -33,9 +36,10 @@ typedef enum
  * @param memoria Memoria interna.
  * @param cfg Configuracion del worker.
  * @param sock_master Socket conectado al master.
+ * @param archivos_modificados Lista de file:tags para llevar conteo de archivos modificados.
  *
  */
-void query_interpretar(char *line, int query_id, char *path_query, t_log *logger, t_memoria_interna *memoria, t_worker_config *cfg, int sock_master);
+void query_interpretar(char *line, int query_id, char *path_query, t_log *logger, t_memoria_interna *memoria, t_worker_config *cfg, int sock_master, t_list *archivos_modificados);
 
 /**
  * @brief Lee e interpreta line calificar la instruccion a realizar
@@ -105,5 +109,20 @@ void leer_memoria(t_memoria_interna *memoria, int direccion, int tamanio, t_log 
  * @param tag Tag del archivo.
  */
 void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, const char *file, const char *tag);
+
+/**
+ * @brief Carga una página de un archivo desde el módulo Storage hacia la memoria interna del Worker.
+ *
+ * @param cfg Configuración del Worker (contiene IP y puerto del Storage).
+ * @param logger Logger del Worker para imprimir los eventos y errores.
+ * @param query_id Identificador de la query actual en ejecución.
+ * @param memoria Estructura de memoria interna del Worker donde se guardan las páginas.
+ * @param marco Índice del marco de memoria donde se almacenará la página cargada.
+ * @param file Nombre del archivo (File) que contiene la página solicitada.
+ * @param tag Etiqueta (Tag) asociada al archivo.
+ * @param numero_pagina Número de la página dentro del archivo que se desea cargar.
+ *
+ */
+void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, int marco, const char *file, const char *tag, int numero_pagina);
 
 #endif

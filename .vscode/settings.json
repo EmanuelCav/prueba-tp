@@ -24,6 +24,8 @@
         "master_queues.h": "c",
         "master_workers.h": "c",
         "master_desconexiones.h": "c",
-        "master_conexiones.h": "c"
+        "master_conexiones.h": "c",
+        "storage_operaciones.h": "c",
+        "worker_query_interpreter.h": "c"
     }
 }

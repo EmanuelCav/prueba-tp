@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
         pthread_t hilo_aging;
         pthread_create(&hilo_aging, NULL, aplicar_aging, cfg);
         pthread_detach(hilo_aging);
-        log_info(logger, "## Aging habilitado (cada %d segundos)", cfg->tiempo_aging * 1000);
+        log_info(logger, "## Aging habilitado (cada %d segundos)", cfg->tiempo_aging);
     }
 
     while (1)
