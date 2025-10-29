@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <commons/log.h>
-#include <pthread.h>
+#include <sys/stat.h>
 
 #define MAX_BUFFER 1024
 
