@@ -436,13 +436,9 @@ void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_
     }
 }
 
-void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_id,
-                                 t_memoria_interna *memoria, int marco,
-                                 const char *file, const char *tag, int numero_pagina)
+void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, int marco, const char *file, const char *tag, int numero_pagina)
 {
-    log_info(logger,
-             "Query %d: - Memoria Miss - File: %s - Tag: %s - Pagina: %d",
-             query_id, file, tag, numero_pagina);
+    log_info(logger, "Query %d: - Memoria Miss - File: %s - Tag: %s - Pagina: %d", query_id, file, tag, numero_pagina);
 
     char comando_get[256];
     sprintf(comando_get, "GET_PAGE|%d|%s|%s|%d", query_id, file, tag, numero_pagina);
@@ -456,13 +452,17 @@ void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_
         return;
     }
 
-    char *marco_data = (char *)memoria->frames[marco];
+    t_pagina *p = &memoria->marcos[marco];
+
+    char *marco_data = (char *)p->marco;
     strncpy(marco_data, respuesta, memoria->tamanio_pagina);
     marco_data[memoria->tamanio_pagina - 1] = '\0';
 
-    memoria->paginas[marco].uso = 1;
-    memoria->paginas[marco].modificada = false;
-    memoria->paginas[marco].numero_pagina = numero_pagina;
+    p->uso = 1;
+    p->modificada = false;
+    p->numero_pagina = numero_pagina;
+    strcpy(p->file, file);
+    strcpy(p->tag, tag);
 
     log_info(logger,
              "Query %d: - Memoria Add - File: %s - Tag: %s - Pagina: %d - Marco: %d",
