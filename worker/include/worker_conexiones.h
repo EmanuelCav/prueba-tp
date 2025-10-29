@@ -43,7 +43,7 @@ int conectar_al_master(t_worker_config *cfg, t_log *logger, int worker_id);
  * char path_query[512];
  * recibir_query(sock_master, &query_id, path_query, &prioridad, &program_counter, logger);
  */
-void recibir_query(int sock_master, int *query_id, char *path_query, int *prioridad, int *program_counter, t_log *logger)
+void recibir_query(int sock_master, int *query_id, char *path_query, int *prioridad, int *program_counter, t_log *logger);
 
 /**
  * @brief Conecta al Storage y solicita información, por ejemplo, tamaño de bloque.
