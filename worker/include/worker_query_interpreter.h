@@ -125,4 +125,12 @@ void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_
  */
 void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, int marco, const char *file, const char *tag, int numero_pagina);
 
+/**
+ * @brief Verifica si un archivo con un determinado tag ya existe en la lista de archivos modificados.
+ *
+ * @param archivos_modificados Lista de archivos modificados (t_list *).
+ * @param file_tag Cadena (`char *`) que identifica el archivo y tag a buscar dentro de la lista.
+ */
+bool existe_file_tag(t_list *archivos_modificados, char *file_tag);
+
 #endif

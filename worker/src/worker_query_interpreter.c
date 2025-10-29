@@ -59,13 +59,12 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
     char file[64], tag[64];
     int direccion, tamanio;
     char contenido[256];
-    int marco_libre;
 
     if (instr_to_enum(line) != INS_TAG && instr_to_enum(line) != INS_COMMIT && instr_to_enum(line) != INS_FLUSH && instr_to_enum(line) != INS_READ)
     {
         sscanf(params, "%[^:]:%s", file, tag);
         char *file_tag = string_from_format("%s:%s", file, tag);
-        if (!list_find(archivos_modificados, file_tag))
+        if (!existe_file_tag(archivos_modificados, file_tag))
         {
             list_add(archivos_modificados, string_duplicate(file_tag));
         }
@@ -145,7 +144,7 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
                 marco_libre = victima;
             }
 
-            asignar_pagina(memoria, marco_libre, numero_pagina, file, tag);
+            asignar_pagina(memoria, marco_libre, numero_pagina, file, tag, logger);
             cargar_pagina_desde_storage(cfg, logger, query_id, memoria, marco_libre, file, tag, numero_pagina);
             marco_existente = marco_libre;
         }
@@ -188,11 +187,11 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
                     flush_file_to_storage(cfg, logger, query_id, memoria,
                                           memoria->marcos[victima].file, memoria->marcos[victima].tag);
 
-                liberar_marco(memoria, victima);
+                liberar_marco(memoria, victima, logger);
                 marco_libre = victima;
             }
 
-            asignar_pagina(memoria, marco_libre, numero_pagina, file, tag);
+            asignar_pagina(memoria, marco_libre, numero_pagina, file, tag, logger);
             cargar_pagina_desde_storage(cfg, logger, query_id, memoria, marco_libre, file, tag, numero_pagina);
             marco_existente = marco_libre;
         }
@@ -224,7 +223,7 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
                       query_id, file_origen, tag_origen, file_dest, tag_dest);
         }
 
-        if (!list_find(archivos_modificados, file_tag))
+        if (!existe_file_tag(archivos_modificados, file_tag))
         {
             list_add(archivos_modificados, string_duplicate(file_tag));
         }
@@ -437,7 +436,9 @@ void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_
     }
 }
 
-void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, int marco, const char *file, const char *tag, int numero_pagina)
+void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_id,
+                                 t_memoria_interna *memoria, int marco,
+                                 const char *file, const char *tag, int numero_pagina)
 {
     log_info(logger,
              "Query %d: - Memoria Miss - File: %s - Tag: %s - Pagina: %d",
@@ -455,16 +456,26 @@ void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_
         return;
     }
 
-    t_pagina *p = &memoria->marcos[marco];
-    strncpy(p->marco, respuesta, memoria->tamanio_pagina);
-    p->marco[memoria->tamanio_pagina - 1] = '\0';
-    p->uso = 1;
-    p->modificada = false;
-    p->numero_pagina = numero_pagina;
+    char *marco_data = (char *)memoria->frames[marco];
+    strncpy(marco_data, respuesta, memoria->tamanio_pagina);
+    marco_data[memoria->tamanio_pagina - 1] = '\0';
+
+    memoria->paginas[marco].uso = 1;
+    memoria->paginas[marco].modificada = false;
+    memoria->paginas[marco].numero_pagina = numero_pagina;
 
     log_info(logger,
              "Query %d: - Memoria Add - File: %s - Tag: %s - Pagina: %d - Marco: %d",
              query_id, file, tag, numero_pagina, marco);
 
     actualizar_tabla_pagina(memoria, file, tag, numero_pagina, marco, true, false);
+}
+
+bool existe_file_tag(t_list *archivos_modificados, char *file_tag)
+{
+    bool _coincide(void *elemento)
+    {
+        return strcmp((char *)elemento, file_tag) == 0;
+    }
+    return list_any_satisfy(archivos_modificados, _coincide);
 }
