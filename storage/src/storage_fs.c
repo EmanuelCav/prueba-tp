@@ -1,5 +1,7 @@
 #include "../include/storage_fs.h"
 
+extern t_storage_config *cfg;
+
 void inicializar_fs(t_storage_config *cfg, t_log *logger)
 {
     if (cfg->fresh_start)
@@ -54,37 +56,14 @@ void crear_bitmap(const char *root_path, int fs_size, int block_size, t_log *log
 {
     char path_bitmap[1024];
     snprintf(path_bitmap, sizeof(path_bitmap), "%s/bitmap.bin", root_path);
-
-    int bloques = fs_size / block_size;
-    size_t bytes = (bloques + 7) / 8;
-
     int bitmap_fd = open(path_bitmap, O_CREAT | O_RDWR, 0666);
-    if (bitmap_fd < 0)
-    {
-        log_error(logger, "No se pudo crear bitmap: %s", strerror(errno));
-        return;
-    }
+    int bloques = fs_size / block_size;
+    ftruncate(bitmap_fd, bloques / 8);
 
-    if (ftruncate(bitmap_fd, (off_t)bytes) != 0)
-    {
-        log_error(logger, "ftruncate fallo: %s", strerror(errno));
-        close(bitmap_fd);
-        return;
-    }
-
-    void *bitmap_map = mmap(NULL, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, bitmap_fd, 0);
-    if (bitmap_map == MAP_FAILED)
-    {
-        log_error(logger, "mmap fallo: %s", strerror(errno));
-        close(bitmap_fd);
-        return;
-    }
-
-    memset(bitmap_map, 0, bytes);
-    if (msync(bitmap_map, bytes, MS_SYNC) != 0)
-        log_warning(logger, "msync fallo: %s", strerror(errno));
-
-    munmap(bitmap_map, bytes);
+    void *bitmap_map = mmap(NULL, bloques / 8, PROT_READ | PROT_WRITE, MAP_SHARED, bitmap_fd, 0);
+    memset(bitmap_map, 0, bloques / 8);
+    msync(bitmap_map, bloques / 8, MS_SYNC);
+    munmap(bitmap_map, bloques / 8);
     close(bitmap_fd);
 
     log_info(logger, "Archivo bitmap creado: %s con %d bloques", path_bitmap, bloques);
@@ -163,12 +142,6 @@ void crear_archivo_inicial(const char *root_path, int block_size, t_log *logger)
         exit(EXIT_FAILURE);
     }
 
-    if (link(path_block0, path_logical_block0) != 0)
-    {
-        log_error(logger, "No se pudo linkear %s -> %s: %s", path_logical_block0, path_block0, strerror(errno));
-    }
-    else
-    {
-        log_info(logger, "Bloque lógico enlazado: %s -> %s", path_logical_block0, path_block0);
-    }
+    link(path_block0, path_logical_block0);
+    log_info(logger, "Bloque lógico enlazado: %s -> %s", path_logical_block0, path_block0);
 }

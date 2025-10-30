@@ -11,7 +11,6 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <errno.h>
 #include <sys/mman.h>
 #include <commons/config.h>
 #include <commons/bitarray.h>

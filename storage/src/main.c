@@ -1,6 +1,7 @@
 #include "../include/storage.h"
 
 t_log *logger;
+t_storage_config *cfg = NULL;
 
 int main(int argc, char *argv[])
 {
@@ -10,7 +11,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    t_storage_config *cfg = leer_config_storage(argv[1]);
+    cfg = leer_config_storage(argv[1]);
     logger = log_create(STORAGE_LOG_PATH, STORAGE_MODULE_NAME, 1, log_level_from_string(cfg->log_level));
 
     inicializar_fs(cfg, logger);
