@@ -493,13 +493,15 @@ void *manejar_worker(void *arg)
 
         mkdir(path_destino, 0777);
         char path_logical_origen[512], path_logical_destino[512];
-        sprintf(path_logical_origen, "%s/logical_blocks", path_origen);
-        sprintf(path_logical_destino, "%s/logical_blocks", path_destino);
+        snprintf(path_logical_origen, sizeof(path_logical_origen), "%s/logical_blocks", path_origen);
+        snprintf(path_logical_destino, sizeof(path_logical_destino), "%s/logical_blocks", path_destino);
+
         mkdir(path_logical_destino, 0777);
 
         char meta_origen[512], meta_destino[512];
-        sprintf(meta_origen, "%s/metadata.config", path_origen);
-        sprintf(meta_destino, "%s/metadata.config", path_destino);
+
+        snprintf(meta_origen, sizeof(meta_origen), "%s/metadata.config", path_origen);
+        snprintf(meta_destino, sizeof(meta_destino), "%s/metadata.config", path_destino);
 
         FILE *src = fopen(meta_origen, "r");
         FILE *dst = fopen(meta_destino, "w");
@@ -540,8 +542,9 @@ void *manejar_worker(void *arg)
                 continue;
 
             char origen_bloque[512], destino_bloque[512];
-            sprintf(origen_bloque, "%s/%s", path_logical_origen, entry->d_name);
-            sprintf(destino_bloque, "%s/%s", path_logical_destino, entry->d_name);
+
+            snprintf(origen_bloque, sizeof(origen_bloque), "%s/%s", path_logical_origen, entry->d_name);
+            snprintf(destino_bloque, sizeof(destino_bloque), "%s/%s", path_logical_destino, entry->d_name);
 
             char path_real[512];
             ssize_t len = readlink(origen_bloque, path_real, sizeof(path_real) - 1);
@@ -561,7 +564,8 @@ void *manejar_worker(void *arg)
         usleep(cfg->retardo_operacion * 1000);
 
         char respuesta[128];
-        sprintf(respuesta, "OK|TAG|%s|%s|%s", file, tag_origen, tag_destino);
+        snprintf(respuesta, sizeof(respuesta), "OK|TAG|%s|%s|%s", file, tag_origen, tag_destino);
+
         send(client_sock, respuesta, strlen(respuesta), 0);
 
         log_info(logger, "##%d - Tag creado %s:%s a partir de %s", query_id, file, tag_destino, tag_origen);
@@ -639,7 +643,7 @@ void *manejar_worker(void *arg)
         }
 
         char path_metadata[1024];
-        sprintf(path_metadata, "%s/metadata.config", path_tag);
+        snprintf(path_metadata, sizeof(path_metadata), "%s/metadata.config", path_tag);
 
         FILE *meta = fopen(path_metadata, "r");
         if (!meta)
@@ -689,7 +693,7 @@ void *manejar_worker(void *arg)
         }
 
         char cmd_rm[1024];
-        sprintf(cmd_rm, "rm -rf %s", path_tag);
+        snprintf(cmd_rm, sizeof(cmd_rm), "rm -rf %s", path_tag);
         system(cmd_rm);
 
         char path_file[1024];
@@ -704,7 +708,7 @@ void *manejar_worker(void *arg)
 
         if (solo_dots)
         {
-            sprintf(cmd_rm, "rm -rf %s", path_file);
+            snprintf(cmd_rm, sizeof(cmd_rm), "rm -rf %s", path_file);
             system(cmd_rm);
             log_info(logger, "STORAGE | DELETE | File %s eliminado por no tener más tags", file);
         }
