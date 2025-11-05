@@ -261,7 +261,7 @@ void *manejar_worker(void *arg)
         char contenido[1024];
         sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]|%d|%[^\n]", &query_id, file, tag, &num_bloque, contenido);
 
-        char path_metadata[512];
+        char path_metadata[1024];
         sprintf(path_metadata, "./files/%s/%s/metadata.config", file, tag);
 
         struct stat info;
@@ -376,7 +376,7 @@ void *manejar_worker(void *arg)
         fclose(fp);
         actualizar_blocks_hash_index(bloque_fisico, logger);
 
-        char resp[64];
+        char resp[256];
         sprintf(resp, "OK|WRITE|%s|%s|%d", file, tag, num_bloque);
         send(client_sock, resp, strlen(resp), 0);
 
@@ -389,7 +389,7 @@ void *manejar_worker(void *arg)
         int num_bloque;
         sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]|%d", &query_id, file, tag, &num_bloque);
 
-        char path_metadata[512];
+        char path_metadata[1024];
         sprintf(path_metadata, "./files/%s/%s/metadata.config", file, tag);
 
         struct stat info;
@@ -571,7 +571,7 @@ void *manejar_worker(void *arg)
     {
         sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]", &query_id, file, tag);
 
-        char path_metadata[512];
+        char path_metadata[1024];
         sprintf(path_metadata, "./files/%s/%s/metadata.config", file, tag);
 
         FILE *meta = fopen(path_metadata, "r+");
@@ -627,7 +627,7 @@ void *manejar_worker(void *arg)
         usleep(cfg->retardo_operacion * 1000);
         sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]", &query_id, file, tag);
 
-        char path_tag[512];
+        char path_tag[1024];
         sprintf(path_tag, "./files/%s/%s", file, tag);
 
         struct stat info;
@@ -638,7 +638,7 @@ void *manejar_worker(void *arg)
             break;
         }
 
-        char path_metadata[512];
+        char path_metadata[1024];
         sprintf(path_metadata, "%s/metadata.config", path_tag);
 
         FILE *meta = fopen(path_metadata, "r");
@@ -688,11 +688,11 @@ void *manejar_worker(void *arg)
             }
         }
 
-        char cmd_rm[512];
+        char cmd_rm[1024];
         sprintf(cmd_rm, "rm -rf %s", path_tag);
         system(cmd_rm);
 
-        char path_file[512];
+        char path_file[1024];
         sprintf(path_file, "./files/%s", file);
         DIR *d = opendir(path_file);
         int solo_dots = 1;
@@ -709,7 +709,7 @@ void *manejar_worker(void *arg)
             log_info(logger, "STORAGE | DELETE | File %s eliminado por no tener más tags", file);
         }
 
-        char resp[64];
+        char resp[256];
         snprintf(resp, sizeof(resp), "OK|DELETE|%s|%s", file, tag);
         send(client_sock, resp, strlen(resp), 0);
 
@@ -974,7 +974,11 @@ void actualizar_blocks_hash_index(int num_bloque, t_log *logger)
     }
 
     unsigned char hash[MD5_DIGEST_LENGTH];
-    MD5(data, leidos, hash);
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    EVP_DigestInit_ex(ctx, EVP_md5(), NULL);
+    EVP_DigestUpdate(ctx, data, leidos);
+    EVP_DigestFinal_ex(ctx, hash, NULL);
+    EVP_MD_CTX_free(ctx);
 
     char hash_string[MD5_DIGEST_LENGTH * 2 + 1];
     for (int i = 0; i < MD5_DIGEST_LENGTH; i++)
