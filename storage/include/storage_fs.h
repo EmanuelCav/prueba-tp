@@ -17,6 +17,7 @@
 #include <commons/crypto.h>
 
 #include "storage_config.h"
+#include "storage_worker.h"
 
 /**
  * @brief Inicializa la estructura del File System.

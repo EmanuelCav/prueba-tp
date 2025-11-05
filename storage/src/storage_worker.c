@@ -710,7 +710,7 @@ void *manejar_worker(void *arg)
         }
 
         char resp[64];
-        sprintf(resp, "OK|DELETE|%s|%s", file, tag);
+        snprintf(resp, sizeof(resp), "OK|DELETE|%s|%s", file, tag);
         send(client_sock, resp, strlen(resp), 0);
 
         log_info(logger, "##%d - Tag Eliminado %s:%s", query_id, file, tag);
