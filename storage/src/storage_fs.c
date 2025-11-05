@@ -1,7 +1,5 @@
 #include "../include/storage_fs.h"
 
-extern t_storage_config *cfg;
-
 void inicializar_fs(t_storage_config *cfg, t_log *logger)
 {
     if (cfg->fresh_start)
@@ -144,4 +142,5 @@ void crear_archivo_inicial(const char *root_path, int block_size, t_log *logger)
 
     link(path_block0, path_logical_block0);
     log_info(logger, "Bloque lógico enlazado: %s -> %s", path_logical_block0, path_block0);
+    marcar_bloque_ocupado(0, logger);
 }
