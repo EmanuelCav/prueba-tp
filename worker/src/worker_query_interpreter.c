@@ -48,7 +48,7 @@ t_instruccion instr_to_enum(char *line)
     }
 }
 
-void query_interpretar(char *line, int query_id, char *path_query, t_log *logger, t_memoria_interna *memoria, t_worker_config *cfg, int sock_master, t_list *archivos_modificados)
+void query_interpretar(char *line, int query_id, char *path_query, t_log *logger, t_memoria_interna *memoria, t_worker_config *cfg, int sock_master, t_list *archivos_modificados, int worker_id)
 {
     usleep(cfg->retardo_memoria * 1000);
 
@@ -105,7 +105,7 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
             sprintf(comando_create, "CREATE|%d|%s|%s|0", query_id, file, tag);
             char respuesta_create[64];
 
-            if (enviar_comando_storage(cfg, logger, query_id, comando_create, respuesta_create, sizeof(respuesta_create)))
+            if (enviar_comando_storage(cfg, logger, worker_id, query_id, comando_create, respuesta_create, sizeof(respuesta_create)))
                 log_info(logger, "## Query %d: - Instrucción realizada: CREATE %s:%s", query_id, file, tag);
             else
                 log_error(logger, "## Query %d: Error en CREATE %s:%s", query_id, file, tag);
@@ -129,7 +129,7 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
             sprintf(comando_truncate, "TRUNCATE|%d|%s|%s|%d", query_id, file, tag, tamanio);
             char respuesta_truncate[64];
 
-            if (enviar_comando_storage(cfg, logger, query_id, comando_truncate, respuesta_truncate, sizeof(respuesta_truncate)))
+            if (enviar_comando_storage(cfg, logger, worker_id, query_id, comando_truncate, respuesta_truncate, sizeof(respuesta_truncate)))
                 log_info(logger, "## Query %d: - Instrucción realizada: TRUNCATE %s:%s tamaño %d", query_id, file, tag, tamanio);
             else
                 log_error(logger, "## Query %d: Error en TRUNCATE %s:%s tamaño %d", query_id, file, tag, tamanio);
@@ -266,7 +266,7 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
             sprintf(comando_tag, "TAG|%d|%s|%s|%s|%s", query_id, file_origen, tag_origen, file_dest, tag_dest);
             char respuesta_tag[64];
 
-            if (enviar_comando_storage(cfg, logger, query_id, comando_tag, respuesta_tag, sizeof(respuesta_tag)))
+            if (enviar_comando_storage(cfg, logger, worker_id, query_id, comando_tag, respuesta_tag, sizeof(respuesta_tag)))
                 log_info(logger, "## Query %d: - Instrucción realizada: TAG %s:%s -> %s:%s", query_id, file_origen, tag_origen, file_dest, tag_dest);
             else
                 log_error(logger, "## Query %d: Error en TAG %s:%s -> %s:%s", query_id, file_origen, tag_origen, file_dest, tag_dest);
@@ -291,7 +291,7 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
             sprintf(comando_commit, "COMMIT|%d|%s|%s", query_id, file, tag);
             char respuesta_commit[64];
 
-            if (enviar_comando_storage(cfg, logger, query_id, comando_commit, respuesta_commit, sizeof(respuesta_commit)))
+            if (enviar_comando_storage(cfg, logger, worker_id, query_id, comando_commit, respuesta_commit, sizeof(respuesta_commit)))
                 log_info(logger, "## Query %d: - Instrucción realizada: COMMIT %s:%s", query_id, file, tag);
             else
                 log_error(logger, "## Query %d: Error en COMMIT %s:%s", query_id, file, tag);
@@ -321,7 +321,7 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
             sprintf(comando_delete, "DELETE|%d|%s|%s", query_id, file, tag);
             char respuesta_delete[64];
 
-            if (enviar_comando_storage(cfg, logger, query_id, comando_delete, respuesta_delete, sizeof(respuesta_delete)))
+            if (enviar_comando_storage(cfg, logger, worker_id, query_id, comando_delete, respuesta_delete, sizeof(respuesta_delete)))
                 log_info(logger, "## Query %d: - Instrucción realizada: DELETE %s:%s", query_id, file, tag);
             else
                 log_error(logger, "## Query %d: Error en DELETE %s:%s", query_id, file, tag);
@@ -356,7 +356,7 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
     }
 }
 
-int enviar_comando_storage(t_worker_config *cfg, t_log *logger, int query_id, const char *comando, char *respuesta, int tam_respuesta)
+int enviar_comando_storage(t_worker_config *cfg, t_log *logger, int worker_id, int query_id, const char *comando, char *respuesta, int tam_respuesta)
 {
     char puerto_str[6];
     sprintf(puerto_str, "%d", cfg->puerto_storage);
@@ -368,12 +368,9 @@ int enviar_comando_storage(t_worker_config *cfg, t_log *logger, int query_id, co
         return 0;
     }
 
-    if (send(sock_storage, comando, strlen(comando), 0) < 0)
-    {
-        log_error(logger, "## Query %d: Error enviando comando al Storage: %s", query_id, comando);
-        close(sock_storage);
-        return 0;
-    }
+    send(sock_storage, &worker_id, sizeof(int), 0);
+
+    send(sock_storage, comando, strlen(comando), 0);
 
     int bytes = recv(sock_storage, respuesta, tam_respuesta - 1, 0);
     if (bytes > 0)
@@ -463,7 +460,7 @@ void leer_memoria(t_memoria_interna *memoria, int direccion, int tamanio, t_log 
     log_error(logger, "## Query %d: No se encontró la página %d en memoria para leer", query_id, numero_pagina);
 }
 
-void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, const char *file, const char *tag)
+void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, const char *file, const char *tag, int worker_id)
 {
     for (int i = 0; i < memoria->cant_marcos; i++)
     {
@@ -480,7 +477,7 @@ void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_
                     memoria->tamanio_pagina, marco_data);
 
             char respuesta_flush[64];
-            if (enviar_comando_storage(cfg, logger, query_id, comando_flush, respuesta_flush, sizeof(respuesta_flush)))
+            if (enviar_comando_storage(cfg, logger, worker_id, query_id, comando_flush, respuesta_flush, sizeof(respuesta_flush)))
             {
                 memoria->marcos[i].modificada = false;
                 log_info(logger, "## Query %d: FLUSH exitoso - Marco %d del file %s:%s",
@@ -490,7 +487,7 @@ void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_
     }
 }
 
-void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, int marco, const char *file, const char *tag, int numero_pagina)
+void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, int marco, const char *file, const char *tag, int numero_pagina, int worker_id)
 {
     log_info(logger, "Query %d: - Memoria Miss - File: %s - Tag: %s - Pagina: %d", query_id, file, tag, numero_pagina);
 
@@ -499,7 +496,7 @@ void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_
 
     char respuesta[4096] = {0};
 
-    if (!enviar_comando_storage(cfg, logger, query_id, comando_get, respuesta, sizeof(respuesta)))
+    if (!enviar_comando_storage(cfg, logger, worker_id, query_id, comando_get, respuesta, sizeof(respuesta)))
     {
         log_error(logger, "## Query %d: Error al solicitar página %d del file %s:%s al Storage",
                   query_id, numero_pagina, file, tag);

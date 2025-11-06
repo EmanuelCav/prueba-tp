@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
         log_info(logger, "## Query %d: FETCH - Program Counter: %d - %s",
                  query_id, program_counter, line);
 
-        query_interpretar(line, query_id, path_query, logger, memoria, cfg, sock_master, archivos_modificados);
+        query_interpretar(line, query_id, path_query, logger, memoria, cfg, sock_master, archivos_modificados, worker_id);
 
         program_counter++;
 

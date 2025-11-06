@@ -37,9 +37,10 @@ typedef enum
  * @param cfg Configuracion del worker.
  * @param sock_master Socket conectado al master.
  * @param archivos_modificados Lista de file:tags para llevar conteo de archivos modificados.
+ * @param worker_id Id del worker.
  *
  */
-void query_interpretar(char *line, int query_id, char *path_query, t_log *logger, t_memoria_interna *memoria, t_worker_config *cfg, int sock_master, t_list *archivos_modificados);
+void query_interpretar(char *line, int query_id, char *path_query, t_log *logger, t_memoria_interna *memoria, t_worker_config *cfg, int sock_master, t_list *archivos_modificados, int worker_id);
 
 /**
  * @brief Lee e interpreta line calificar la instruccion a realizar
@@ -55,13 +56,14 @@ t_instruccion instr_to_enum(char *line);
  *
  * @param cfg Configuración del worker.
  * @param logger Logger para mensajes.
+ * @param worker_id Id del worker.
  * @param query_id ID de la query.
  * @param comando Comando a enviar al storage.
  * @param respuesta Buffer para recibir la respuesta.
  * @param tam_respuesta Tamaño del buffer de respuesta.
  * @return int 1 si fue exitoso, 0 si hubo error.
  */
-int enviar_comando_storage(t_worker_config *cfg, t_log *logger, int query_id, const char *comando, char *respuesta, int tam_respuesta);
+int enviar_comando_storage(t_worker_config *cfg, t_log *logger, int worker_id, int query_id, const char *comando, char *respuesta, int tam_respuesta);
 
 /**
  * @brief Envía datos al módulo Master
@@ -107,8 +109,10 @@ void leer_memoria(t_memoria_interna *memoria, int direccion, int tamanio, t_log 
  * @param memoria Memoria interna.
  * @param file Nombre del archivo.
  * @param tag Tag del archivo.
+ * @param worker_id Id del worker. 
+ *
  */
-void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, const char *file, const char *tag);
+void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, const char *file, const char *tag, int worker_id);
 
 /**
  * @brief Carga una página de un archivo desde el módulo Storage hacia la memoria interna del Worker.
@@ -121,9 +125,10 @@ void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_
  * @param file Nombre del archivo (File) que contiene la página solicitada.
  * @param tag Etiqueta (Tag) asociada al archivo.
  * @param numero_pagina Número de la página dentro del archivo que se desea cargar.
+ * @param worker_id Id del worker.
  *
  */
-void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, int marco, const char *file, const char *tag, int numero_pagina);
+void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, int marco, const char *file, const char *tag, int numero_pagina, int worker_id);
 
 /**
  * @brief Verifica si un archivo con un determinado tag ya existe en la lista de archivos modificados.
