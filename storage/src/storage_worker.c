@@ -483,52 +483,40 @@ void *manejar_worker(void *arg)
         case CMD_TAG:
         {
             usleep(cfg->retardo_operacion * 1000);
-            char tag_origen[64], tag_destino[64];
-            sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]|%[^|]", &query_id, file, tag_origen, tag_destino);
+
+            char file_origen[64], tag_origen[64], file_destino[64], tag_destino[64];
+
+            sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]|%[^|]|%[^|]",
+                   &query_id, file_origen, tag_origen, file_destino, tag_destino);
 
             char path_origen[512], path_destino[512];
-            sprintf(path_origen, "./files/%s/%s", file, tag_origen);
-            sprintf(path_destino, "./files/%s/%s", file, tag_destino);
+            sprintf(path_origen, "./files/%s/%s", file_origen, tag_origen);
+            sprintf(path_destino, "./files/%s/%s", file_destino, tag_destino);
 
             struct stat info;
             if (stat(path_origen, &info) != 0)
             {
-                log_error(logger, "STORAGE | TAG | Error: Tag origen inexistente. File:%s Tag:%s", file, tag_origen);
+                log_error(logger, "STORAGE | TAG | Error: Tag origen inexistente. %s:%s", file_origen, tag_origen);
                 send(client_sock, "ERR_TAG_ORIGIN_NOT_FOUND", 25, 0);
                 break;
             }
 
             if (stat(path_destino, &info) == 0)
             {
-                log_error(logger, "STORAGE | TAG | Error: Tag destino ya existe. File:%s Tag:%s", file, tag_destino);
+                log_error(logger, "STORAGE | TAG | Error: Tag destino ya existe. %s:%s", file_destino, tag_destino);
                 send(client_sock, "ERR_TAG_ALREADY_EXISTS", 23, 0);
                 break;
             }
 
             mkdir(path_destino, 0777);
-            char path_logical_origen[512], path_logical_destino[512];
-            snprintf(path_logical_origen, sizeof(path_logical_origen), "%s/logical_blocks", path_origen);
-            snprintf(path_logical_destino, sizeof(path_logical_destino), "%s/logical_blocks", path_destino);
 
-            mkdir(path_logical_destino, 0777);
+            // Copiar metadata
+            char meta_src[512], meta_dst[512];
+            sprintf(meta_src, "%s/metadata.config", path_origen);
+            sprintf(meta_dst, "%s/metadata.config", path_destino);
 
-            char meta_origen[512], meta_destino[512];
-
-            snprintf(meta_origen, sizeof(meta_origen), "%s/metadata.config", path_origen);
-            snprintf(meta_destino, sizeof(meta_destino), "%s/metadata.config", path_destino);
-
-            FILE *src = fopen(meta_origen, "r");
-            FILE *dst = fopen(meta_destino, "w");
-            if (!src || !dst)
-            {
-                log_error(logger, "STORAGE | TAG | Error al copiar metadata de %s a %s", meta_origen, meta_destino);
-                send(client_sock, "ERR_COPY_METADATA", 18, 0);
-                if (src)
-                    fclose(src);
-                if (dst)
-                    fclose(dst);
-                break;
-            }
+            FILE *src = fopen(meta_src, "r");
+            FILE *dst = fopen(meta_dst, "w");
 
             char linea[256];
             while (fgets(linea, sizeof(linea), src))
@@ -541,48 +529,34 @@ void *manejar_worker(void *arg)
             fclose(src);
             fclose(dst);
 
-            DIR *dir = opendir(path_logical_origen);
-            if (!dir)
-            {
-                log_error(logger, "STORAGE | TAG | Error abriendo carpeta de bloques lógicos: %s", path_logical_origen);
-                send(client_sock, "ERR_OPEN_LOGICAL_BLOCKS", 24, 0);
-                break;
-            }
+            char log_src[512], log_dst[512];
+            sprintf(log_src, "%s/logical_blocks", path_origen);
+            sprintf(log_dst, "%s/logical_blocks", path_destino);
+            mkdir(log_dst, 0777);
 
+            DIR *dir = opendir(log_src);
             struct dirent *entry;
             while ((entry = readdir(dir)) != NULL)
             {
                 if (entry->d_name[0] == '.')
                     continue;
 
-                char origen_bloque[512], destino_bloque[512];
+                char orig_block[512], dest_block[512], real_block[512];
+                sprintf(orig_block, "%s/%s", log_src, entry->d_name);
+                sprintf(dest_block, "%s/%s", log_dst, entry->d_name);
 
-                snprintf(origen_bloque, sizeof(origen_bloque), "%s/%s", path_logical_origen, entry->d_name);
-                snprintf(destino_bloque, sizeof(destino_bloque), "%s/%s", path_logical_destino, entry->d_name);
+                ssize_t len = readlink(orig_block, real_block, sizeof(real_block) - 1);
+                real_block[len] = '\0';
 
-                char path_real[512];
-                ssize_t len = readlink(origen_bloque, path_real, sizeof(path_real) - 1);
-                if (len != -1)
-                {
-                    path_real[len] = '\0';
-                    link(path_real, destino_bloque);
-                    log_info(logger, "STORAGE | TAG | Enlazado %s -> %s", destino_bloque, path_real);
-                }
-                else
-                {
-                    log_error(logger, "STORAGE | TAG | Error leyendo enlace de bloque: %s", origen_bloque);
-                }
+                link(real_block, dest_block);
             }
             closedir(dir);
 
-            usleep(cfg->retardo_operacion * 1000);
+            char resp[128];
+            sprintf(resp, "OK|TAG|%s:%s->%s:%s", file_origen, tag_origen, file_destino, tag_destino);
+            send(client_sock, resp, strlen(resp));
 
-            char respuesta[128];
-            snprintf(respuesta, sizeof(respuesta), "OK|TAG|%s|%s|%s", file, tag_origen, tag_destino);
-
-            send(client_sock, respuesta, strlen(respuesta), 0);
-
-            log_info(logger, "##%d - Tag creado %s:%s a partir de %s", query_id, file, tag_destino, tag_origen);
+            log_info(logger, "##%d - TAG creado %s:%s → %s:%s", query_id, file_origen, tag_origen, file_destino, tag_destino);
             break;
         }
         case CMD_COMMIT:
