@@ -119,7 +119,7 @@ void crear_archivo_inicial(const char *root_path, int block_size, t_log *logger)
     len = snprintf(path_block0, sizeof(path_block0), "%s/physical_blocks/block%06d.dat", root_path, 0);
     if (len >= sizeof(path_block0))
     {
-        log_error(logger, "Ruta demasiado larga: %s/physical_blocks/block%06d.dat", root_path);
+        log_error(logger, "Ruta demasiado larga: %s/physical_blocks/block%06d.dat", root_path, 0);
         exit(EXIT_FAILURE);
     }
 
@@ -133,14 +133,21 @@ void crear_archivo_inicial(const char *root_path, int block_size, t_log *logger)
     }
 
     char path_logical_block0[4096];
-    len = snprintf(path_logical_block0, sizeof(path_logical_block0), "%s/physical_blocks/block%06d.dat", path_tag, 0);
+    len = snprintf(path_logical_block0, sizeof(path_logical_block0), "%s/logical_blocks/%06d.dat", path_tag, 0);
     if (len >= sizeof(path_logical_block0))
     {
-        log_error(logger, "Ruta demasiado larga: %s/physical_blocks/block%06d.dat", path_tag);
+        log_error(logger, "Ruta demasiado larga: %s/logical_blocks/%06d.dat", path_tag, 0);
         exit(EXIT_FAILURE);
     }
 
-    link(path_block0, path_logical_block0);
-    log_info(logger, "Bloque lógico enlazado: %s -> %s", path_logical_block0, path_block0);
+    if (link(path_block0, path_logical_block0) != 0)
+    {
+        log_error(logger, "Error creando enlace lógico: %s -> %s", path_logical_block0, path_block0);
+    }
+    else
+    {
+        log_info(logger, "Bloque lógico enlazado: %s -> %s", path_logical_block0, path_block0);
+    }
+    
     marcar_bloque_ocupado(0, logger);
 }
