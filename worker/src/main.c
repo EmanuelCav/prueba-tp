@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
     t_worker_config *cfg = leer_config_worker(argv[1]);
     logger = log_create(WORKER_LOG_PATH, WORKER_MODULE_NAME, 1, log_level_from_string(cfg->log_level));
 
-    int tamanio_pagina = consultar_storage(cfg, logger);
+    int tamanio_pagina = consultar_storage(cfg, logger, worker_id);
     t_memoria_interna *memoria = memoria_crear(cfg->tam_memoria, tamanio_pagina);
 
     log_info(logger, "Memoria interna inicializada: %d bytes, %d marcos de %d bytes",

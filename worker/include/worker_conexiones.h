@@ -50,10 +50,9 @@ void recibir_query(int sock_master, int *query_id, char *path_query, int *priori
  *
  * @param cfg Configuración del Worker.
  * @param logger Logger para imprimir mensajes.
+ * @param worker_id Id del worker.
  *
- * @example
- * consultar_storage(cfg, logger);
  */
-int consultar_storage(t_worker_config *cfg, t_log *logger);
+int consultar_storage(t_worker_config *cfg, t_log *logger, int worker_id);
 
 #endif
