@@ -386,14 +386,11 @@ int enviar_comando_storage(t_worker_config *cfg, t_log *logger, int worker_id, i
 int enviar_comando_master(int sock_master, t_log *logger, int query_id, const char *comando, const char *datos)
 {
     char mensaje[512];
+
     if (strlen(datos) > 0)
-    {
-        sprintf(mensaje, "%s|%s", comando, datos);
-    }
+        sprintf(mensaje, "%s|%s\n", comando, datos);
     else
-    {
-        strcpy(mensaje, comando);
-    }
+        sprintf(mensaje, "%s\n", comando);
 
     if (send(sock_master, mensaje, strlen(mensaje), 0) < 0)
     {

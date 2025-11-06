@@ -63,7 +63,7 @@ void desconectar_worker(int socket)
                 if (qc && qc->activo)
                 {
                     char mensaje_error[256];
-                    sprintf(mensaje_error, "END|Error: Worker desconectado");
+                    sprintf(mensaje_error, "END|Error: Worker desconectado\n");
                     send(qc->socket, mensaje_error, strlen(mensaje_error), 0);
                     log_info(logger, "## Query %d finalizada por desconexión de Worker", query_executandose->query_id);
                 }
@@ -143,7 +143,7 @@ void desconectar_query_control(t_query_control_activo *qc)
             if (workers[i].worker_id == query_exec->worker_id)
             {
                 char mensaje_cancel[256];
-                sprintf(mensaje_cancel, "CANCEL|%d", qc->query_id);
+                sprintf(mensaje_cancel, "CANCEL|%d\n", qc->query_id);
                 send(workers[i].socket, mensaje_cancel, strlen(mensaje_cancel), 0);
                 workers[i].ocupado = false;
                 log_info(logger, "## Query %d cancelada en Worker %d", qc->query_id, workers[i].worker_id);
@@ -263,7 +263,7 @@ void *atender_conexion(void *arg)
                 if (qc && qc->activo)
                 {
                     char mensaje_read[1024];
-                    sprintf(mensaje_read, "READ|%s|%s", tag, contenido);
+                    sprintf(mensaje_read, "READ|%s|%s\n", tag, contenido);
                     send(qc->socket, mensaje_read, strlen(mensaje_read), 0);
                     log_info(logger,
                              "## Se envía un mensaje de lectura de la Query %d en el Worker %d al Query Control",
