@@ -483,24 +483,58 @@ void *manejar_worker(void *arg)
         case CMD_TAG:
         {
             usleep(cfg->retardo_operacion * 1000);
-            char tag_origen[64], tag_destino[64];
-            sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]|%[^|]", &query_id, file, tag_origen, tag_destino);
+            char src_field[128], dst_field[128];
+            sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]", &query_id, src_field, dst_field);
 
+            char file_origen[64] = {0}, tag_origen[64] = {0};
+            char file_dest[64] = {0}, tag_dest[64] = {0};
+
+            char *p = strchr(src_field, ':');
+            if (p)
+            {
+                size_t l = p - src_field;
+                if (l >= sizeof(file_origen))
+                    l = sizeof(file_origen) - 1;
+                strncpy(file_origen, src_field, l);
+                file_origen[l] = '\0';
+                strncpy(tag_origen, p + 1, sizeof(tag_origen) - 1);
+                tag_origen[sizeof(tag_origen) - 1] = '\0';
+            }
+            else
+            {
+                strncpy(file_origen, src_field, sizeof(file_origen) - 1);
+                strncpy(tag_origen, "BASE", sizeof(tag_origen) - 1);
+            }
+            p = strchr(dst_field, ':');
+            if (p)
+            {
+                size_t l = p - dst_field;
+                if (l >= sizeof(file_dest))
+                    l = sizeof(file_dest) - 1;
+                strncpy(file_dest, dst_field, l);
+                file_dest[l] = '\0';
+                strncpy(tag_dest, p + 1, sizeof(tag_dest) - 1);
+                tag_dest[sizeof(tag_dest) - 1] = '\0';
+            }
+            else
+            {
+                strncpy(file_dest, dst_field, sizeof(file_dest) - 1);
+                strncpy(tag_dest, "BASE", sizeof(tag_dest) - 1);
+            }
             char path_origen[512], path_destino[512];
-            sprintf(path_origen, "./files/%s/%s", file, tag_origen);
-            sprintf(path_destino, "./files/%s/%s", file, tag_destino);
-
+            snprintf(path_origen, sizeof(path_origen), "./files/%s/%s", file_origen, tag_origen);
+            snprintf(path_destino, sizeof(path_destino), "./files/%s/%s", file_dest, tag_dest);
             struct stat info;
             if (stat(path_origen, &info) != 0)
             {
-                log_error(logger, "STORAGE | TAG | Error: Tag origen inexistente. File:%s Tag:%s", file, tag_origen);
+                log_error(logger, "STORAGE | TAG | Error: Tag origen inexistente. File:%s Tag:%s", file_origen, tag_origen);
                 send(client_sock, "ERR_TAG_ORIGIN_NOT_FOUND", 25, 0);
                 break;
             }
 
             if (stat(path_destino, &info) == 0)
             {
-                log_error(logger, "STORAGE | TAG | Error: Tag destino ya existe. File:%s Tag:%s", file, tag_destino);
+                log_error(logger, "STORAGE | TAG | Error: Tag destino ya existe. File:%s Tag:%s", file_dest, tag_dest);
                 send(client_sock, "ERR_TAG_ALREADY_EXISTS", 23, 0);
                 break;
             }
@@ -513,7 +547,6 @@ void *manejar_worker(void *arg)
             mkdir(path_logical_destino, 0777);
 
             char meta_origen[512], meta_destino[512];
-
             snprintf(meta_origen, sizeof(meta_origen), "%s/metadata.config", path_origen);
             snprintf(meta_destino, sizeof(meta_destino), "%s/metadata.config", path_destino);
 
@@ -578,11 +611,11 @@ void *manejar_worker(void *arg)
             usleep(cfg->retardo_operacion * 1000);
 
             char respuesta[128];
-            snprintf(respuesta, sizeof(respuesta), "OK|TAG|%s|%s|%s", file, tag_origen, tag_destino);
+            snprintf(respuesta, sizeof(respuesta), "OK|TAG|%s|%s|%s:%s", file_origen, tag_origen, file_dest, tag_dest);
 
             send(client_sock, respuesta, strlen(respuesta), 0);
 
-            log_info(logger, "##%d - Tag creado %s:%s a partir de %s", query_id, file, tag_destino, tag_origen);
+            log_info(logger, "##%d - Tag creado %s:%s a partir de %s:%s", query_id, file_dest, tag_dest, file_origen, tag_origen);
             break;
         }
         case CMD_COMMIT:
