@@ -11,26 +11,35 @@ pthread_mutex_t mutex_bitmap = PTHREAD_MUTEX_INITIALIZER;
 
 comando_t parse_comando(const char *cmd)
 {
-    if (strcmp(cmd, "GET_BLOCK_SIZE") == 0)
+    char temp[64];
+    strncpy(temp, cmd, sizeof(temp) - 1);
+    temp[sizeof(temp) - 1] = '\0';
+
+    char *token = strtok(temp, "|");
+    if (!token)
+        return CMD_UNKNOWN;
+
+    if (strcmp(token, "GET_BLOCK_SIZE") == 0)
         return CMD_GET_BLOCK_SIZE;
-    if (strcmp(cmd, "GET_FS_SIZE") == 0)
+    if (strcmp(token, "GET_FS_SIZE") == 0)
         return CMD_GET_FS_SIZE;
-    if (strcmp(cmd, "CREATE") == 0)
+    if (strcmp(token, "CREATE") == 0)
         return CMD_CREATE;
-    if (strcmp(cmd, "TRUNCATE") == 0)
+    if (strcmp(token, "TRUNCATE") == 0)
         return CMD_TRUNCATE;
-    if (strcmp(cmd, "WRITE") == 0)
+    if (strcmp(token, "WRITE") == 0)
         return CMD_WRITE;
-    if (strcmp(cmd, "READ") == 0)
+    if (strcmp(token, "READ") == 0)
         return CMD_READ;
-    if (strcmp(cmd, "TAG") == 0)
+    if (strcmp(token, "TAG") == 0)
         return CMD_TAG;
-    if (strcmp(cmd, "COMMIT") == 0)
+    if (strcmp(token, "COMMIT") == 0)
         return CMD_COMMIT;
-    if (strcmp(cmd, "DELETE") == 0)
+    if (strcmp(token, "DELETE") == 0)
         return CMD_DELETE;
-    if (strcmp(cmd, "END") == 0)
+    if (strcmp(token, "END") == 0)
         return CMD_END;
+
     return CMD_UNKNOWN;
 }
 
