@@ -518,8 +518,8 @@ void *manejar_worker(void *arg)
             }
             else
             {
-                strncpy(file_dest, dst_field, sizeof(file_dest) - 1);
-                strncpy(tag_dest, "BASE", sizeof(tag_dest) - 1);
+                strncpy(file_dest, file_origen, sizeof(file_dest) - 1);
+                strncpy(tag_dest, dst_field, sizeof(tag_dest) - 1);
             }
             char path_origen[512], path_destino[512];
             snprintf(path_origen, sizeof(path_origen), "./files/%s/%s", file_origen, tag_origen);
