@@ -241,7 +241,7 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
                 marco_existente = marco_libre;
             }
 
-            leer_memoria(memoria, direccion, tamanio, logger, query_id, sock_master);
+            leer_memoria(memoria, direccion, tamanio, logger, query_id, sock_master, file, tag);
             log_info(logger, "## Query %d: - Instrucción realizada: READ %s:%s [%d bytes]", query_id, file, tag, tamanio);
         }
         break;
@@ -428,14 +428,17 @@ void escribir_memoria(t_memoria_interna *memoria, int direccion, const char *con
     log_error(logger, "## Query %d: No se encontró la página %d en memoria para escribir", query_id, numero_pagina);
 }
 
-void leer_memoria(t_memoria_interna *memoria, int direccion, int tamanio, t_log *logger, int query_id, int sock_master)
+void leer_memoria(t_memoria_interna *memoria, int direccion, int tamanio, t_log *logger, int query_id, int sock_master, char *file, char *tag)
 {
     int numero_pagina = direccion / memoria->tamanio_pagina;
     int offset = direccion % memoria->tamanio_pagina;
 
     for (int i = 0; i < memoria->cant_marcos; i++)
     {
-        if (memoria->marcos[i].ocupada && memoria->marcos[i].numero_pagina == numero_pagina)
+        if (memoria->marcos[i].ocupada &&
+            memoria->marcos[i].numero_pagina == numero_pagina &&
+            strcmp(memoria->marcos[i].file, file) == 0 &&
+            strcmp(memoria->marcos[i].tag, tag) == 0)
         {
             char *marco_data = (char *)memoria->marcos[i].marco;
             char datos_leidos[256];
@@ -447,9 +450,12 @@ void leer_memoria(t_memoria_interna *memoria, int direccion, int tamanio, t_log 
 
             log_info(logger, "Query %d: Acción: LEER - Dirección Física: %d - Valor: %s", query_id, direccion, datos_leidos);
 
-            char comando_read[512];
-            sprintf(comando_read, "READ|%d|%s", query_id, datos_leidos);
-            enviar_comando_master(sock_master, logger, query_id, comando_read, "");
+            char mensaje[512];
+            sprintf(mensaje, "READ|%d|%s:%s|%s\n", query_id, file, tag, datos_leidos);
+
+            send(sock_master, mensaje, strlen(mensaje), 0);
+            log_info(logger, "## Query %d: Comando enviado al Master: %s", query_id, mensaje);
+
             return;
         }
     }

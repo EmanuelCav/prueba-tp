@@ -97,8 +97,10 @@ void escribir_memoria(t_memoria_interna *memoria, int direccion, const char *con
  * @param logger Logger para mensajes.
  * @param query_id ID de la query.
  * @param sock_master Socket para enviar datos al master.
+ * @param file File de la instrucción
+ * @param tag Tag de la instrucción
  */
-void leer_memoria(t_memoria_interna *memoria, int direccion, int tamanio, t_log *logger, int query_id, int sock_master);
+void leer_memoria(t_memoria_interna *memoria, int direccion, int tamanio, t_log *logger, int query_id, int sock_master, char *file, char *tag);
 
 /**
  * @brief Persiste modificaciones de un file:tag en storage
