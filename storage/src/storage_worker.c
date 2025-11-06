@@ -483,12 +483,12 @@ void *manejar_worker(void *arg)
         case CMD_TAG:
         {
             usleep(cfg->retardo_operacion * 1000);
-            char tag_origen[64], file_dest[64], tag_destino[64];
-            sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]|%[^|]|%[^|]", &query_id, file, tag_origen, file_dest, tag_destino);
+            char tag_origen[64], tag_destino[64];
+            sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]|%[^|]", &query_id, file, tag_origen, tag_destino);
 
             char path_origen[512], path_destino[512];
             sprintf(path_origen, "./files/%s/%s", file, tag_origen);
-            sprintf(path_destino, "./files/%s/%s", file_dest, tag_destino);
+            sprintf(path_destino, "./files/%s/%s", file, tag_destino);
 
             struct stat info;
             if (stat(path_origen, &info) != 0)
