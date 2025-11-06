@@ -63,7 +63,7 @@ int consultar_storage(t_worker_config *cfg, t_log *logger, int worker_id)
         exit(EXIT_FAILURE);
     }
 
-    send(sock_storage, worker_id, sizeof(int), 0);
+    send(sock_storage, &worker_id, sizeof(int), 0);
 
     const char *mensaje = "GET_BLOCK_SIZE";
     send(sock_storage, mensaje, strlen(mensaje), 0);
