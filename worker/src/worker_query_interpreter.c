@@ -175,14 +175,14 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
 
                     if (memoria->marcos[victima].modificada)
                         flush_file_to_storage(cfg, logger, query_id, memoria,
-                                              memoria->marcos[victima].file, memoria->marcos[victima].tag);
+                                              memoria->marcos[victima].file, memoria->marcos[victima].tag, worker_id);
 
                     liberar_marco(memoria, victima, logger);
                     marco_libre = victima;
                 }
 
                 asignar_pagina(memoria, marco_libre, numero_pagina, file, tag, logger);
-                cargar_pagina_desde_storage(cfg, logger, query_id, memoria, marco_libre, file, tag, numero_pagina);
+                cargar_pagina_desde_storage(cfg, logger, query_id, memoria, marco_libre, file, tag, numero_pagina, worker_id);
                 marco_existente = marco_libre;
             }
 
@@ -230,14 +230,14 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
 
                     if (memoria->marcos[victima].modificada)
                         flush_file_to_storage(cfg, logger, query_id, memoria,
-                                              memoria->marcos[victima].file, memoria->marcos[victima].tag);
+                                              memoria->marcos[victima].file, memoria->marcos[victima].tag, worker_id);
 
                     liberar_marco(memoria, victima, logger);
                     marco_libre = victima;
                 }
 
                 asignar_pagina(memoria, marco_libre, numero_pagina, file, tag, logger);
-                cargar_pagina_desde_storage(cfg, logger, query_id, memoria, marco_libre, file, tag, numero_pagina);
+                cargar_pagina_desde_storage(cfg, logger, query_id, memoria, marco_libre, file, tag, numero_pagina, worker_id);
                 marco_existente = marco_libre;
             }
 
@@ -284,7 +284,7 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
             break;
         }
 
-        flush_file_to_storage(cfg, logger, query_id, memoria, file, tag);
+        flush_file_to_storage(cfg, logger, query_id, memoria, file, tag, worker_id);
 
         {
             char comando_commit[256];
@@ -305,7 +305,7 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
             break;
         }
 
-        flush_file_to_storage(cfg, logger, query_id, memoria, file, tag);
+        flush_file_to_storage(cfg, logger, query_id, memoria, file, tag, worker_id);
         log_info(logger, "## Query %d: - Instrucción realizada: FLUSH %s:%s", query_id, file, tag);
         break;
 
@@ -338,7 +338,7 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
                 char file_local[64], tag_local[64];
                 if (sscanf(file_tag, "%63[^:]:%63s", file_local, tag_local) == 2)
                 {
-                    flush_file_to_storage(cfg, logger, query_id, memoria, file_local, tag_local);
+                    flush_file_to_storage(cfg, logger, query_id, memoria, file_local, tag_local, worker_id);
                 }
             }
             list_destroy_and_destroy_elements(archivos_modificados, free);
