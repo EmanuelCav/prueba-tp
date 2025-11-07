@@ -140,4 +140,6 @@ void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_
  */
 bool existe_file_tag(t_list *archivos_modificados, char *file_tag);
 
+bool existe_en_storage(char *file, char *tag);
+
 #endif

@@ -247,6 +247,7 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
         break;
 
     case INS_TAG:
+    {
         if (params == NULL)
         {
             log_error(logger, "## Query %d: TAG sin parámetros", query_id);
@@ -254,43 +255,36 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
         }
 
         char file_origen[64], tag_origen[64];
-        char file_dest[64], tag_dest[64];
-
-        int cant = sscanf(params, "%63[^:]:%63s %63[^:]:%63s",
-                          file_origen, tag_origen, file_dest, tag_dest);
-
-        if (cant == 2)
-        {
-            strcpy(file_dest, file_origen);
-            strcpy(tag_dest, tag_origen);
-            strcpy(tag_dest, strtok(params + strlen(file_origen) + strlen(tag_origen) + 2, " "));
-        }
-        else if (cant != 4)
+        if (sscanf(params, "%63[^:]:%63s", file_origen, tag_origen) != 2)
         {
             log_error(logger, "## Query %d: TAG parámetros inválidos: '%s'", query_id, params);
             break;
         }
 
+        int index = 1;
+        char file_dest[64];
+        char tag_dest[64];
+
+        strcpy(file_dest, file_origen);
+
+        do
+        {
+            sprintf(tag_dest, "tag_%d_0_0", index++);
+            char ruta[256];
+            sprintf(ruta, "%s/%s/%s", cfg->path_storage_files, file_dest, tag_dest);
+        } while (existe_en_storage(file_dest, tag_dest));
+
         char comando_tag[256];
-        sprintf(comando_tag, "TAG|%d|%s|%s|%s|%s",
-                query_id, file_origen, tag_origen, file_dest, tag_dest);
+        sprintf(comando_tag, "TAG|%d|%s|%s|%s|%s", query_id, file_origen, tag_origen, file_dest, tag_dest);
 
         char respuesta_tag[64];
-
         if (enviar_comando_storage(cfg, logger, worker_id, query_id, comando_tag, respuesta_tag, sizeof(respuesta_tag)))
-            log_info(logger, "## Query %d: - Instrucción realizada: TAG %s:%s -> %s:%s",
-                     query_id, file_origen, tag_origen, file_dest, tag_dest);
+            log_info(logger, "## Query %d: - TAG creado %s:%s -> %s:%s", query_id, file_origen, tag_origen, file_dest, tag_dest);
         else
-            log_error(logger, "## Query %d: Error en TAG %s:%s -> %s:%s",
-                      query_id, file_origen, tag_origen, file_dest, tag_dest);
+            log_error(logger, "## Query %d: Error en TAG %s:%s -> %s:%s", query_id, file_origen, tag_origen, file_dest, tag_dest);
 
-        {
-            char *file_tag_dst = string_from_format("%s:%s", file_dest, tag_dest);
-            if (!existe_file_tag(archivos_modificados, file_tag_dst))
-                list_add(archivos_modificados, string_duplicate(file_tag_dst));
-            free(file_tag_dst);
-        }
         break;
+    }
 
     case INS_COMMIT:
         if (params == NULL || sscanf(params, "%63[^:]:%63s", file, tag) != 2)
@@ -547,4 +541,12 @@ bool existe_file_tag(t_list *archivos_modificados, char *file_tag)
         return strcmp((char *)elemento, file_tag) == 0;
     }
     return list_any_satisfy(archivos_modificados, _coincide);
+}
+
+bool existe_en_storage(char *file, char *tag)
+{
+    char path[512];
+    sprintf(path, "./files/%s/%s", file, tag);
+    struct stat st;
+    return (stat(path, &st) == 0);
 }
