@@ -486,16 +486,38 @@ void *manejar_worker(void *arg)
         {
             usleep(cfg->retardo_operacion * 1000);
 
-            int query_id;
-            char file_origen[64], tag_origen[64];
-            char file_dest[64], tag_dest[64];
+            char src_field[128], dst_field[128];
+            sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]", &query_id, src_field, dst_field);
 
-            // Formato: TAG|query_id|file_origen|tag_origen|file_dest|tag_dest
-            if (sscanf(buffer, "TAG|%d|%[^|]|%[^|]|%[^|]|%[^|]",
-                       &query_id, file_origen, tag_origen, file_dest, tag_dest) != 5)
+            char file_origen[64] = {0}, tag_origen[64] = {0};
+            char file_dest[64] = {0}, tag_dest[64] = {0};
+
+            char *p = strchr(src_field, ':');
+            if (p)
             {
-                send(client_sock, "ERR_TAG_INVALID_FORMAT", 22, 0);
-                break;
+                size_t len = p - src_field;
+                strncpy(file_origen, src_field, len);
+                file_origen[len] = '\0';
+                strncpy(tag_origen, p + 1, sizeof(tag_origen) - 1);
+            }
+            else
+            {
+                strcpy(file_origen, src_field);
+                strcpy(tag_origen, "BASE");
+            }
+
+            p = strchr(dst_field, ':');
+            if (p)
+            {
+                size_t len = p - dst_field;
+                strncpy(file_dest, dst_field, len);
+                file_dest[len] = '\0';
+                strncpy(tag_dest, p + 1, sizeof(tag_dest) - 1);
+            }
+            else
+            {
+                strcpy(file_dest, dst_field);
+                strcpy(tag_dest, "BASE");
             }
 
             char path_origen[512], path_destino[512];
@@ -505,22 +527,16 @@ void *manejar_worker(void *arg)
             struct stat st;
             if (stat(path_origen, &st) != 0)
             {
-                send(client_sock, "ERR_TAG_ORIGIN_NOT_FOUND", 24, 0);
+                send(client_sock, "ERR_TAG_ORIGIN_NOT_FOUND", 25, 0);
                 break;
             }
 
             if (stat(path_destino, &st) == 0)
             {
-                send(client_sock, "ERR_TAG_ALREADY_EXISTS", 22, 0);
+                send(client_sock, "ERR_TAG_ALREADY_EXISTS", 23, 0);
                 break;
             }
 
-            // Crear carpeta file_dest si no existe
-            char path_filedir[512];
-            snprintf(path_filedir, sizeof(path_filedir), "./files/%s", file_dest);
-            mkdir(path_filedir, 0777);
-
-            // Crear carpeta tag destino
             mkdir(path_destino, 0777);
 
             char path_logical_origen[512], path_logical_destino[512];
@@ -528,51 +544,71 @@ void *manejar_worker(void *arg)
             snprintf(path_logical_destino, sizeof(path_logical_destino), "%s/logical_blocks", path_destino);
             mkdir(path_logical_destino, 0777);
 
-            // Copiar metadata
             char meta_origen[512], meta_destino[512];
             snprintf(meta_origen, sizeof(meta_origen), "%s/metadata.config", path_origen);
             snprintf(meta_destino, sizeof(meta_destino), "%s/metadata.config", path_destino);
 
             FILE *src = fopen(meta_origen, "r");
             FILE *dst = fopen(meta_destino, "w");
-
-            char linea[256];
-            while (fgets(linea, sizeof(linea), src))
+            if (!src || !dst)
             {
-                if (strstr(linea, "ESTADO="))
+                send(client_sock, "ERR_COPY_METADATA", 18, 0);
+                if (src)
+                    fclose(src);
+                if (dst)
+                    fclose(dst);
+                break;
+            }
+
+            char line[256];
+            while (fgets(line, sizeof(line), src))
+            {
+                if (strstr(line, "ESTADO="))
                     fprintf(dst, "ESTADO=WORK_IN_PROGRESS\n");
                 else
-                    fputs(linea, dst);
+                    fputs(line, dst);
             }
             fclose(src);
             fclose(dst);
 
-            // Copiar enlaces hard (no copiar bloques)
-            DIR *d = opendir(path_logical_origen);
-            struct dirent *ent;
-            while ((ent = readdir(d)) != NULL)
+            DIR *dir = opendir(path_logical_origen);
+            if (!dir)
             {
-                if (ent->d_name[0] == '.')
-                    continue;
-
-                char origen_b[512], destino_b[512], real_b[512];
-                snprintf(origen_b, sizeof(origen_b), "%s/%s", path_logical_origen, ent->d_name);
-                snprintf(destino_b, sizeof(destino_b), "%s/%s", path_logical_destino, ent->d_name);
-
-                ssize_t len = readlink(origen_b, real_b, sizeof(real_b) - 1);
-                if (len == -1)
-                    continue;
-                real_b[len] = '\0';
-
-                link(real_b, destino_b);
+                send(client_sock, "ERR_OPEN_LOGICAL_BLOCKS", 24, 0);
+                break;
             }
-            closedir(d);
 
-            char resp[128];
-            sprintf(resp, "OK|TAG|%s:%s->%s:%s", file_origen, tag_origen, file_dest, tag_dest);
-            send(client_sock, resp, strlen(resp), 0);
+            struct dirent *entry;
+            while ((entry = readdir(dir)) != NULL)
+            {
 
-            log_info(logger, "##%d - TAG creado %s:%s a partir de %s:%s", query_id, file_dest, tag_dest, file_origen, tag_origen);
+                if (entry->d_name[0] == '.')
+                    continue;
+
+                char origen_bloque[512], destino_bloque[512];
+                snprintf(origen_bloque, sizeof(origen_bloque), "%s/%s", path_logical_origen, entry->d_name);
+                snprintf(destino_bloque, sizeof(destino_bloque), "%s/%s", path_logical_destino, entry->d_name);
+
+                // Obtener el bloque físico al que apunta
+                char path_real[512];
+                ssize_t len = readlink(origen_bloque, path_real, sizeof(path_real) - 1);
+                if (len != -1)
+                {
+                    path_real[len] = '\0';
+                    // Crear hardlink en destino
+                    link(path_real, destino_bloque);
+                }
+            }
+
+            closedir(dir);
+
+            char respuesta[128];
+            snprintf(respuesta, sizeof(respuesta), "OK|TAG|%s|%s|%s:%s", file_origen, tag_origen, file_dest, tag_dest);
+            send(client_sock, respuesta, strlen(respuesta), 0);
+
+            log_info(logger, "##%d - Tag creado %s:%s a partir de %s:%s",
+                     query_id, file_dest, tag_dest, file_origen, tag_origen);
+
             break;
         }
         case CMD_COMMIT:
