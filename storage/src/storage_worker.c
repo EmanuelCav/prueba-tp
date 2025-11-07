@@ -485,7 +485,7 @@ void *manejar_worker(void *arg)
             usleep(cfg->retardo_operacion * 1000);
 
             int query_id;
-            char src_field[128], dst_field[128];
+            char src_field[128], dst_field[128] = {0};
 
             sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]", &query_id, src_field, dst_field);
 
@@ -497,25 +497,57 @@ void *manejar_worker(void *arg)
             {
                 size_t len = p - src_field;
                 strncpy(file_origen, src_field, len);
-                strcpy(tag_origen, p + 1);
+                file_origen[len] = '\0';
+                strncpy(tag_origen, p + 1, sizeof(tag_origen) - 1);
             }
             else
             {
-                strcpy(file_origen, src_field);
-                strcpy(tag_origen, "BASE");
+                strncpy(file_origen, src_field, sizeof(file_origen) - 1);
+                strncpy(tag_origen, "BASE", sizeof(tag_origen) - 1);
             }
 
-            p = strchr(dst_field, ':');
-            if (p)
+            if (strlen(dst_field) == 0)
             {
-                size_t len = p - dst_field;
-                strncpy(file_dest, dst_field, len);
-                strcpy(tag_dest, p + 1);
+                strncpy(file_dest, file_origen, sizeof(file_dest) - 1);
+                int next_version = obtener_siguiente_version((char[]){0});
+                char path_file_dir[512];
+                snprintf(path_file_dir, sizeof(path_file_dir), "./files/%s", file_origen);
+                next_version = obtener_siguiente_version(path_file_dir);
+                snprintf(tag_dest, sizeof(tag_dest), "tag_%d_0_0", next_version);
             }
             else
             {
-                strcpy(file_dest, dst_field);
-                strcpy(tag_dest, "BASE");
+                p = strchr(dst_field, ':');
+                if (p)
+                {
+                    size_t len = p - dst_field;
+                    strncpy(file_dest, dst_field, len);
+                    file_dest[len] = '\0';
+                    strncpy(tag_dest, p + 1, sizeof(tag_dest) - 1);
+                }
+                else
+                {
+                    strncpy(file_dest, dst_field, sizeof(file_dest) - 1);
+                    if (strcmp(file_dest, file_origen) == 0)
+                    {
+                        char path_file_dir[512];
+                        snprintf(path_file_dir, sizeof(path_file_dir), "./files/%s", file_dest);
+                        int next_version = obtener_siguiente_version(path_file_dir);
+                        snprintf(tag_dest, sizeof(tag_dest), "tag_%d_0_0", next_version);
+                    }
+                    else
+                    {
+                        strncpy(tag_dest, "BASE", sizeof(tag_dest) - 1);
+                    }
+                }
+            }
+
+            if (strlen(tag_dest) == 0)
+            {
+                char path_file_dir[512];
+                snprintf(path_file_dir, sizeof(path_file_dir), "./files/%s", file_dest[0] ? file_dest : file_origen);
+                int next_version = obtener_siguiente_version(path_file_dir);
+                snprintf(tag_dest, sizeof(tag_dest), "tag_%d_0_0", next_version);
             }
 
             char path_origen[512], path_destino[512];
@@ -538,7 +570,15 @@ void *manejar_worker(void *arg)
                 break;
             }
 
+            char path_filedir[512];
+            snprintf(path_filedir, sizeof(path_filedir), "./files/%s", file_dest);
+            mkdir(path_filedir, 0777);
+
             mkdir(path_destino, 0777);
+            char path_logical_destino[512], path_logical_origen[512];
+            snprintf(path_logical_origen, sizeof(path_logical_origen), "%s/logical_blocks", path_origen);
+            snprintf(path_logical_destino, sizeof(path_logical_destino), "%s/logical_blocks", path_destino);
+            mkdir(path_logical_destino, 0777);
 
             char meta_origen[512], meta_destino[512];
             snprintf(meta_origen, sizeof(meta_origen), "%s/metadata.config", path_origen);
@@ -556,8 +596,7 @@ void *manejar_worker(void *arg)
                     fclose(dst);
                 break;
             }
-
-            char linea[256];
+            char linea[512];
             while (fgets(linea, sizeof(linea), src))
             {
                 if (strstr(linea, "ESTADO="))
@@ -568,38 +607,40 @@ void *manejar_worker(void *arg)
             fclose(src);
             fclose(dst);
 
-            char path_logical_origen[512], path_logical_destino[512];
-            snprintf(path_logical_origen, sizeof(path_logical_origen), "%s/logical_blocks", path_origen);
-            snprintf(path_logical_destino, sizeof(path_logical_destino), "%s/logical_blocks", path_destino);
-            mkdir(path_logical_destino, 0777);
-
             DIR *dir = opendir(path_logical_origen);
+            if (!dir)
+            {
+                log_error(logger, "STORAGE | TAG | Error abriendo carpeta de bloques lógicos: %s", path_logical_origen);
+                send(client_sock, "ERR_OPEN_LOGICAL_BLOCKS", 24, 0);
+                break;
+            }
             struct dirent *entry;
-
             while ((entry = readdir(dir)) != NULL)
             {
                 if (entry->d_name[0] == '.')
                     continue;
-
                 char origen_bloque[512], destino_bloque[512], path_real[512];
                 snprintf(origen_bloque, sizeof(origen_bloque), "%s/%s", path_logical_origen, entry->d_name);
                 snprintf(destino_bloque, sizeof(destino_bloque), "%s/%s", path_logical_destino, entry->d_name);
-
                 ssize_t len = readlink(origen_bloque, path_real, sizeof(path_real) - 1);
                 if (len != -1)
                 {
                     path_real[len] = '\0';
                     link(path_real, destino_bloque);
+                    log_info(logger, "STORAGE | TAG | Enlazado %s -> %s", destino_bloque, path_real);
+                }
+                else
+                {
+                    log_error(logger, "STORAGE | TAG | Error leyendo enlace de bloque: %s", origen_bloque);
                 }
             }
             closedir(dir);
 
-            char respuesta[128];
+            char respuesta[256];
             snprintf(respuesta, sizeof(respuesta), "OK|TAG|%s:%s->%s:%s", file_origen, tag_origen, file_dest, tag_dest);
             send(client_sock, respuesta, strlen(respuesta), 0);
 
-            log_info(logger, "##%d - Tag creada %s:%s desde %s:%s", query_id, file_dest, tag_dest, file_origen, tag_origen);
-
+            log_info(logger, "##%d - Tag creado %s:%s a partir de %s:%s", query_id, file_dest, tag_dest, file_origen, tag_origen);
             break;
         }
         case CMD_COMMIT:
@@ -1241,4 +1282,29 @@ void marcar_bloque_ocupado(int num_bloque, t_log *logger)
     close(bitmap_fd);
 
     log_info(logger, "STORAGE | Bitmap actualizado: bloque %d marcado como OCUPADO.", num_bloque);
+}
+
+int obtener_siguiente_version(const char *path_file_dir)
+{
+    DIR *dir = opendir(path_file_dir);
+    if (!dir) return 1;
+
+    struct dirent *entry;
+    int max_version = 0;
+
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (entry->d_type == DT_DIR && strncmp(entry->d_name, "tag_", 4) == 0)
+        {
+            int ver;
+            if (sscanf(entry->d_name, "tag_%d_0_0", &ver) == 1)
+            {
+                if (ver > max_version)
+                    max_version = ver;
+            }
+        }
+    }
+
+    closedir(dir);
+    return max_version + 1;
 }

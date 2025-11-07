@@ -131,4 +131,6 @@ void metadata_reemplazar_bloque(const char *path_metadata, int num_bloque_logico
  */
 void marcar_bloque_ocupado(int num_bloque, t_log *logger);
 
+int obtener_siguiente_version(const char *path_file_dir);
+
 #endif
