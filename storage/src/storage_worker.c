@@ -483,37 +483,64 @@ void *manejar_worker(void *arg)
         case CMD_TAG:
         {
             usleep(cfg->retardo_operacion * 1000);
-            char tag_origen[64], tag_destino[64];
-            sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]|%[^|]", &query_id, file, tag_origen, tag_destino);
+
+            int query_id;
+            char src_field[128], dst_field[128];
+
+            sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]", &query_id, src_field, dst_field);
+
+            char file_origen[64] = {0}, tag_origen[64] = {0};
+            char file_dest[64] = {0}, tag_dest[64] = {0};
+
+            char *p = strchr(src_field, ':');
+            if (p)
+            {
+                size_t len = p - src_field;
+                strncpy(file_origen, src_field, len);
+                strcpy(tag_origen, p + 1);
+            }
+            else
+            {
+                strcpy(file_origen, src_field);
+                strcpy(tag_origen, "BASE");
+            }
+
+            p = strchr(dst_field, ':');
+            if (p)
+            {
+                size_t len = p - dst_field;
+                strncpy(file_dest, dst_field, len);
+                strcpy(tag_dest, p + 1);
+            }
+            else
+            {
+                strcpy(file_dest, dst_field);
+                strcpy(tag_dest, "BASE");
+            }
 
             char path_origen[512], path_destino[512];
-            sprintf(path_origen, "./files/%s/%s", file, tag_origen);
-            sprintf(path_destino, "./files/%s/%s", file, tag_destino);
+            snprintf(path_origen, sizeof(path_origen), "./files/%s/%s", file_origen, tag_origen);
+            snprintf(path_destino, sizeof(path_destino), "./files/%s/%s", file_dest, tag_dest);
 
             struct stat info;
+
             if (stat(path_origen, &info) != 0)
             {
-                log_error(logger, "STORAGE | TAG | Error: Tag origen inexistente. File:%s Tag:%s", file, tag_origen);
+                log_error(logger, "STORAGE | TAG | Error: Tag origen no existe. %s:%s", file_origen, tag_origen);
                 send(client_sock, "ERR_TAG_ORIGIN_NOT_FOUND", 25, 0);
                 break;
             }
 
             if (stat(path_destino, &info) == 0)
             {
-                log_error(logger, "STORAGE | TAG | Error: Tag destino ya existe. File:%s Tag:%s", file, tag_destino);
+                log_error(logger, "STORAGE | TAG | Error: Tag destino ya existe. %s:%s", file_dest, tag_dest);
                 send(client_sock, "ERR_TAG_ALREADY_EXISTS", 23, 0);
                 break;
             }
 
             mkdir(path_destino, 0777);
-            char path_logical_origen[512], path_logical_destino[512];
-            snprintf(path_logical_origen, sizeof(path_logical_origen), "%s/logical_blocks", path_origen);
-            snprintf(path_logical_destino, sizeof(path_logical_destino), "%s/logical_blocks", path_destino);
-
-            mkdir(path_logical_destino, 0777);
 
             char meta_origen[512], meta_destino[512];
-
             snprintf(meta_origen, sizeof(meta_origen), "%s/metadata.config", path_origen);
             snprintf(meta_destino, sizeof(meta_destino), "%s/metadata.config", path_destino);
 
@@ -521,7 +548,7 @@ void *manejar_worker(void *arg)
             FILE *dst = fopen(meta_destino, "w");
             if (!src || !dst)
             {
-                log_error(logger, "STORAGE | TAG | Error al copiar metadata de %s a %s", meta_origen, meta_destino);
+                log_error(logger, "STORAGE | TAG | Error al copiar metadata.");
                 send(client_sock, "ERR_COPY_METADATA", 18, 0);
                 if (src)
                     fclose(src);
@@ -541,48 +568,38 @@ void *manejar_worker(void *arg)
             fclose(src);
             fclose(dst);
 
-            DIR *dir = opendir(path_logical_origen);
-            if (!dir)
-            {
-                log_error(logger, "STORAGE | TAG | Error abriendo carpeta de bloques lógicos: %s", path_logical_origen);
-                send(client_sock, "ERR_OPEN_LOGICAL_BLOCKS", 24, 0);
-                break;
-            }
+            char path_logical_origen[512], path_logical_destino[512];
+            snprintf(path_logical_origen, sizeof(path_logical_origen), "%s/logical_blocks", path_origen);
+            snprintf(path_logical_destino, sizeof(path_logical_destino), "%s/logical_blocks", path_destino);
+            mkdir(path_logical_destino, 0777);
 
+            DIR *dir = opendir(path_logical_origen);
             struct dirent *entry;
+
             while ((entry = readdir(dir)) != NULL)
             {
                 if (entry->d_name[0] == '.')
                     continue;
 
-                char origen_bloque[512], destino_bloque[512];
-
+                char origen_bloque[512], destino_bloque[512], path_real[512];
                 snprintf(origen_bloque, sizeof(origen_bloque), "%s/%s", path_logical_origen, entry->d_name);
                 snprintf(destino_bloque, sizeof(destino_bloque), "%s/%s", path_logical_destino, entry->d_name);
 
-                char path_real[512];
                 ssize_t len = readlink(origen_bloque, path_real, sizeof(path_real) - 1);
                 if (len != -1)
                 {
                     path_real[len] = '\0';
                     link(path_real, destino_bloque);
-                    log_info(logger, "STORAGE | TAG | Enlazado %s -> %s", destino_bloque, path_real);
-                }
-                else
-                {
-                    log_error(logger, "STORAGE | TAG | Error leyendo enlace de bloque: %s", origen_bloque);
                 }
             }
             closedir(dir);
 
-            usleep(cfg->retardo_operacion * 1000);
-
             char respuesta[128];
-            snprintf(respuesta, sizeof(respuesta), "OK|TAG|%s|%s|%s", file, tag_origen, tag_destino);
-
+            snprintf(respuesta, sizeof(respuesta), "OK|TAG|%s:%s->%s:%s", file_origen, tag_origen, file_dest, tag_dest);
             send(client_sock, respuesta, strlen(respuesta), 0);
 
-            log_info(logger, "##%d - Tag creado %s:%s a partir de %s", query_id, file, tag_destino, tag_origen);
+            log_info(logger, "##%d - Tag creada %s:%s desde %s:%s", query_id, file_dest, tag_dest, file_origen, tag_origen);
+
             break;
         }
         case CMD_COMMIT:
