@@ -483,8 +483,26 @@ void *manejar_worker(void *arg)
         case CMD_TAG:
         {
             usleep(cfg->retardo_operacion * 1000);
-            char src_field[128], dst_field[128];
-            sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]", &query_id, src_field, dst_field);
+
+            char src_field[128] = {0}, dst_field[128] = {0};
+            // input expected: TAG|<query_id>|<src>|<dst>
+            sscanf(buffer, "%*[^|]|%d|%127[^|]|%127[^\n]", &query_id, src_field, dst_field);
+
+            // trim trailing/leading whitespace helpers
+            auto trim = [](char *s)
+            {
+                // leading
+                while (*s && isspace((unsigned char)*s))
+                    memmove(s, s + 1, strlen(s));
+                // trailing
+                size_t L = strlen(s);
+                while (L > 0 && isspace((unsigned char)s[L - 1]))
+                    s[--L] = '\0';
+            };
+            trim(src_field);
+            trim(dst_field);
+
+            log_info(logger, "STORAGE | TAG | parsed src_field='%s' dst_field='%s'", src_field, dst_field);
 
             char file_origen[64] = {0}, tag_origen[64] = {0};
             char file_dest[64] = {0}, tag_dest[64] = {0};
@@ -505,6 +523,7 @@ void *manejar_worker(void *arg)
                 strncpy(file_origen, src_field, sizeof(file_origen) - 1);
                 strncpy(tag_origen, "BASE", sizeof(tag_origen) - 1);
             }
+
             p = strchr(dst_field, ':');
             if (p)
             {
@@ -519,16 +538,38 @@ void *manejar_worker(void *arg)
             else
             {
                 strncpy(file_dest, file_origen, sizeof(file_dest) - 1);
+                if (strlen(dst_field) == 0)
+                {
+                    log_error(logger, "STORAGE | TAG | Error: destino vacio.");
+                    send(client_sock, "ERR_TAG_DEST_EMPTY", 18, 0);
+                    break;
+                }
                 strncpy(tag_dest, dst_field, sizeof(tag_dest) - 1);
             }
+
+            trim(file_origen);
+            trim(tag_origen);
+            trim(file_dest);
+            trim(tag_dest);
+
+            log_info(logger, "STORAGE | TAG | origin=%s:%s dest=%s:%s", file_origen, tag_origen, file_dest, tag_dest);
+
             char path_origen[512], path_destino[512];
             snprintf(path_origen, sizeof(path_origen), "./files/%s/%s", file_origen, tag_origen);
             snprintf(path_destino, sizeof(path_destino), "./files/%s/%s", file_dest, tag_dest);
+
             struct stat info;
             if (stat(path_origen, &info) != 0)
             {
                 log_error(logger, "STORAGE | TAG | Error: Tag origen inexistente. File:%s Tag:%s", file_origen, tag_origen);
                 send(client_sock, "ERR_TAG_ORIGIN_NOT_FOUND", 25, 0);
+                break;
+            }
+
+            if (strcmp(file_origen, file_dest) == 0 && strcmp(tag_origen, tag_dest) == 0)
+            {
+                log_error(logger, "STORAGE | TAG | Error: Tag destino ya existe (igual al origen). File:%s Tag:%s", file_dest, tag_dest);
+                send(client_sock, "ERR_TAG_ALREADY_EXISTS", 23, 0);
                 break;
             }
 
@@ -543,7 +584,6 @@ void *manejar_worker(void *arg)
             char path_logical_origen[512], path_logical_destino[512];
             snprintf(path_logical_origen, sizeof(path_logical_origen), "%s/logical_blocks", path_origen);
             snprintf(path_logical_destino, sizeof(path_logical_destino), "%s/logical_blocks", path_destino);
-
             mkdir(path_logical_destino, 0777);
 
             char meta_origen[512], meta_destino[512];
@@ -563,7 +603,6 @@ void *manejar_worker(void *arg)
                 break;
             }
 
-            char linea[256];
             while (fgets(linea, sizeof(linea), src))
             {
                 if (strstr(linea, "ESTADO="))
@@ -588,12 +627,10 @@ void *manejar_worker(void *arg)
                 if (entry->d_name[0] == '.')
                     continue;
 
-                char origen_bloque[512], destino_bloque[512];
-
+                char origen_bloque[512], destino_bloque[512], path_real[512];
                 snprintf(origen_bloque, sizeof(origen_bloque), "%s/%s", path_logical_origen, entry->d_name);
                 snprintf(destino_bloque, sizeof(destino_bloque), "%s/%s", path_logical_destino, entry->d_name);
 
-                char path_real[512];
                 ssize_t len = readlink(origen_bloque, path_real, sizeof(path_real) - 1);
                 if (len != -1)
                 {
@@ -612,7 +649,6 @@ void *manejar_worker(void *arg)
 
             char respuesta[128];
             snprintf(respuesta, sizeof(respuesta), "OK|TAG|%s|%s|%s:%s", file_origen, tag_origen, file_dest, tag_dest);
-
             send(client_sock, respuesta, strlen(respuesta), 0);
 
             log_info(logger, "##%d - Tag creado %s:%s a partir de %s:%s", query_id, file_dest, tag_dest, file_origen, tag_origen);
