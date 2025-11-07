@@ -96,56 +96,52 @@ void *manejar_worker(void *arg)
         case CMD_CREATE:
         {
             usleep(cfg->retardo_operacion * 1000);
+            struct stat info;
+            sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]|%d", &query_id, file, tag, &tamanio);
 
-            char file_field[128];
-            sscanf(buffer, "%*[^|]|%d|%[^|]", &query_id, file_field);
-            char file[64], tag[64];
-
-            char *p = strchr(file_field, ':');
-            if (p)
+            char path_tag[4096];
+            snprintf(path_tag, sizeof(path_tag), "./files/%s/%s", file, tag);
+            if (stat(path_tag, &info) == 0 && S_ISDIR(info.st_mode))
             {
-                size_t l = p - file_field;
-                strncpy(file, file_field, l);
-                file[l] = '\0';
-            }
-            else
-            {
-                strcpy(file, file_field);
+                log_error(logger, "STORAGE | CREATE | Error: File:Tag %s:%s ya existe.", file, tag);
+                char msg[64];
+                sprintf(msg, "ERR_FILE_TAG_ALREADY_EXIST");
+                send(client_sock, msg, strlen(msg), 0);
+                break;
             }
 
-            char path_file[256];
+            char path_file[4096];
             snprintf(path_file, sizeof(path_file), "./files/%s", file);
-
             mkdir(path_file, 0777);
-            strcpy(tag, "tag_1_0_0");
-
-            char path_tag[512];
-            snprintf(path_tag, sizeof(path_tag), "%s/%s", path_file, tag);
-
             mkdir(path_tag, 0777);
 
-            char path_blocks[512];
-            snprintf(path_blocks, sizeof(path_blocks), "%s/logical_blocks", path_tag);
-            mkdir(path_blocks, 0777);
+            char path_logical[4096];
+            snprintf(path_logical, sizeof(path_logical), "./files/%s/%s/logical_blocks", file, tag);
+            mkdir(path_logical, 0777);
 
-            char path_metadata[512];
-            snprintf(path_metadata, sizeof(path_metadata), "%s/metadata.config", path_tag);
+            char path_metadata[4096];
+            snprintf(path_metadata, sizeof(path_metadata), "./files/%s/%s/metadata.config", file, tag);
 
             FILE *meta = fopen(path_metadata, "w");
             if (meta)
             {
-                fprintf(meta, "TAMAÑO=0\n");
-                fprintf(meta, "BLOCKS=[]\n");
+                fprintf(meta, "TAMAÑO=%d\n", tamanio);
+                fprintf(meta, "BLOCKS=[0]\n");
                 fprintf(meta, "ESTADO=WORK_IN_PROGRESS\n");
                 fclose(meta);
                 log_info(logger, "Archivo metadata creado: %s", path_metadata);
             }
-
-            char resp[128];
-            snprintf(resp, sizeof(resp), "OK|CREATE|%s|%s", file, tag);
-            send(client_sock, resp, strlen(resp), 0);
-
-            log_info(logger, "##%d- File Creado %s con version inicial %s", query_id, file, tag);
+            else
+            {
+                log_error(logger, "Error creando metadata: %s", path_metadata);
+                char respuesta[512];
+                sprintf(respuesta, "ERR_CREATION_METADATA");
+                send(client_sock, respuesta, strlen(respuesta), 0);
+            }
+            char respuesta[512];
+            sprintf(respuesta, "OK|CREATE|%s|%s", file, tag);
+            send(client_sock, respuesta, strlen(respuesta), 0);
+            log_info(logger, "##%d- File Creado %s:%s", query_id, file, tag);
             break;
         }
         case CMD_TRUNCATE:
@@ -487,43 +483,106 @@ void *manejar_worker(void *arg)
         case CMD_TAG:
         {
             usleep(cfg->retardo_operacion * 1000);
-
-            char src_field[128];
-            sscanf(buffer, "%*[^|]|%d|%[^|]", &query_id, src_field);
-
-            char file_origen[64], tag_origen[64];
-            char *p = strchr(src_field, ':');
-            if (p)
-            {
-                size_t l = p - src_field;
-                strncpy(file_origen, src_field, l);
-                file_origen[l] = '\0';
-                strncpy(tag_origen, p + 1, sizeof(tag_origen) - 1);
-            }
-            else
-            {
-                strcpy(file_origen, src_field);
-                strcpy(tag_origen, "BASE");
-            }
-
-            char path_file[256];
-            snprintf(path_file, sizeof(path_file), "./files/%s", file_origen);
-            int next_version = obtener_siguiente_version(path_file);
-
-            char tag_dest[64];
-            snprintf(tag_dest, sizeof(tag_dest), "tag_%d_0_0", next_version);
+            char tag_origen[64], tag_destino[64];
+            sscanf(buffer, "%*[^|]|%d|%[^|]|%[^|]|%[^|]", &query_id, file, tag_origen, tag_destino);
 
             char path_origen[512], path_destino[512];
-            snprintf(path_origen, sizeof(path_origen), "./files/%s/%s", file_origen, tag_origen);
-            snprintf(path_destino, sizeof(path_destino), "./files/%s/%s", file_origen, tag_dest);
+            sprintf(path_origen, "./files/%s/%s", file, tag_origen);
+            sprintf(path_destino, "./files/%s/%s", file, tag_destino);
+
+            struct stat info;
+            if (stat(path_origen, &info) != 0)
+            {
+                log_error(logger, "STORAGE | TAG | Error: Tag origen inexistente. File:%s Tag:%s", file, tag_origen);
+                send(client_sock, "ERR_TAG_ORIGIN_NOT_FOUND", 25, 0);
+                break;
+            }
+
+            if (stat(path_destino, &info) == 0)
+            {
+                log_error(logger, "STORAGE | TAG | Error: Tag destino ya existe. File:%s Tag:%s", file, tag_destino);
+                send(client_sock, "ERR_TAG_ALREADY_EXISTS", 23, 0);
+                break;
+            }
+
+            mkdir(path_destino, 0777);
+            char path_logical_origen[512], path_logical_destino[512];
+            snprintf(path_logical_origen, sizeof(path_logical_origen), "%s/logical_blocks", path_origen);
+            snprintf(path_logical_destino, sizeof(path_logical_destino), "%s/logical_blocks", path_destino);
+
+            mkdir(path_logical_destino, 0777);
+
+            char meta_origen[512], meta_destino[512];
+
+            snprintf(meta_origen, sizeof(meta_origen), "%s/metadata.config", path_origen);
+            snprintf(meta_destino, sizeof(meta_destino), "%s/metadata.config", path_destino);
+
+            FILE *src = fopen(meta_origen, "r");
+            FILE *dst = fopen(meta_destino, "w");
+            if (!src || !dst)
+            {
+                log_error(logger, "STORAGE | TAG | Error al copiar metadata de %s a %s", meta_origen, meta_destino);
+                send(client_sock, "ERR_COPY_METADATA", 18, 0);
+                if (src)
+                    fclose(src);
+                if (dst)
+                    fclose(dst);
+                break;
+            }
+
+            char linea[256];
+            while (fgets(linea, sizeof(linea), src))
+            {
+                if (strstr(linea, "ESTADO="))
+                    fprintf(dst, "ESTADO=WORK_IN_PROGRESS\n");
+                else
+                    fputs(linea, dst);
+            }
+            fclose(src);
+            fclose(dst);
+
+            DIR *dir = opendir(path_logical_origen);
+            if (!dir)
+            {
+                log_error(logger, "STORAGE | TAG | Error abriendo carpeta de bloques lógicos: %s", path_logical_origen);
+                send(client_sock, "ERR_OPEN_LOGICAL_BLOCKS", 24, 0);
+                break;
+            }
+
+            struct dirent *entry;
+            while ((entry = readdir(dir)) != NULL)
+            {
+                if (entry->d_name[0] == '.')
+                    continue;
+
+                char origen_bloque[512], destino_bloque[512];
+
+                snprintf(origen_bloque, sizeof(origen_bloque), "%s/%s", path_logical_origen, entry->d_name);
+                snprintf(destino_bloque, sizeof(destino_bloque), "%s/%s", path_logical_destino, entry->d_name);
+
+                char path_real[512];
+                ssize_t len = readlink(origen_bloque, path_real, sizeof(path_real) - 1);
+                if (len != -1)
+                {
+                    path_real[len] = '\0';
+                    link(path_real, destino_bloque);
+                    log_info(logger, "STORAGE | TAG | Enlazado %s -> %s", destino_bloque, path_real);
+                }
+                else
+                {
+                    log_error(logger, "STORAGE | TAG | Error leyendo enlace de bloque: %s", origen_bloque);
+                }
+            }
+            closedir(dir);
+
+            usleep(cfg->retardo_operacion * 1000);
 
             char respuesta[128];
-            snprintf(respuesta, sizeof(respuesta), "OK|TAG|%s:%s->%s:%s", file_origen, tag_origen, file_origen, tag_dest);
+            snprintf(respuesta, sizeof(respuesta), "OK|TAG|%s|%s|%s", file, tag_origen, tag_destino);
+
             send(client_sock, respuesta, strlen(respuesta), 0);
 
-            log_info(logger, "##%d - Tag creado %s:%s a partir de %s:%s",
-                     query_id, file_origen, tag_dest, file_origen, tag_origen);
-
+            log_info(logger, "##%d - Tag creado %s:%s a partir de %s", query_id, file, tag_destino, tag_origen);
             break;
         }
         case CMD_COMMIT:
@@ -1165,30 +1224,4 @@ void marcar_bloque_ocupado(int num_bloque, t_log *logger)
     close(bitmap_fd);
 
     log_info(logger, "STORAGE | Bitmap actualizado: bloque %d marcado como OCUPADO.", num_bloque);
-}
-
-int obtener_siguiente_version(const char *path_file_dir)
-{
-    DIR *dir = opendir(path_file_dir);
-    if (!dir)
-        return 1;
-
-    struct dirent *entry;
-    int max_version = 0;
-
-    while ((entry = readdir(dir)) != NULL)
-    {
-        if (entry->d_type == DT_DIR && strncmp(entry->d_name, "tag_", 4) == 0)
-        {
-            int ver;
-            if (sscanf(entry->d_name, "tag_%d_0_0", &ver) == 1)
-            {
-                if (ver > max_version)
-                    max_version = ver;
-            }
-        }
-    }
-
-    closedir(dir);
-    return max_version + 1;
 }
