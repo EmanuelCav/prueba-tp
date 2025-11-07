@@ -76,6 +76,8 @@ void *manejar_worker(void *arg)
         char file[64], tag[64];
         int tamanio, query_id;
 
+        log_info(logger, "Instruccion: %s", cmd);
+
         switch (cmd)
         {
         case CMD_GET_BLOCK_SIZE:
