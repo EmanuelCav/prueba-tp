@@ -271,7 +271,7 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
         } while (tag_existe_en_storage(cfg, logger, worker_id, query_id, file_dest, tag_dest));
 
         char comando_tag[256];
-        sprintf(comando_tag, "TAG|%d|%s|%s|%s|%s", query_id, file_origen, tag_origen, file_dest, tag_dest);
+        sprintf(comando_tag, "TAG|%d|%s:%s|%s:%s", query_id, file_origen, tag_origen, file_dest, tag_dest);
 
         char respuesta_tag[64];
         if (enviar_comando_storage(cfg, logger, worker_id, query_id, comando_tag, respuesta_tag, sizeof(respuesta_tag)))
