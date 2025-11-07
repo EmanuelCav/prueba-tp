@@ -39,6 +39,8 @@ comando_t parse_comando(const char *cmd)
         return CMD_DELETE;
     if (strcmp(token, "END") == 0)
         return CMD_END;
+    if (strcmp(token, "GET_BLOCK_SIZE") == 0)
+        return CMD_EXISTS_TAG;
 
     return CMD_UNKNOWN;
 }
@@ -725,6 +727,22 @@ void *manejar_worker(void *arg)
         case CMD_END:
         {
             send(client_sock, "OK", 2, 0);
+            break;
+        }
+        case CMD_EXISTS_TAG:
+        {
+            char file[64], tag[64];
+            sscanf(buffer, "%*[^|]|%[^|]|%s", file, tag);
+
+            char path[256];
+            sprintf(path, "./files/%s/%s", file, tag);
+
+            struct stat st;
+            if (stat(path, &st) == 0)
+                send(client_sock, "EXISTS", 6, 0);
+            else
+                send(client_sock, "NO_EXISTS", 9, 0);
+
             break;
         }
         case CMD_UNKNOWN:

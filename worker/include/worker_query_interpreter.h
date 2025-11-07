@@ -111,7 +111,7 @@ void leer_memoria(t_memoria_interna *memoria, int direccion, int tamanio, t_log 
  * @param memoria Memoria interna.
  * @param file Nombre del archivo.
  * @param tag Tag del archivo.
- * @param worker_id Id del worker. 
+ * @param worker_id Id del worker.
  *
  */
 void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, const char *file, const char *tag, int worker_id);
@@ -140,6 +140,6 @@ void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_
  */
 bool existe_file_tag(t_list *archivos_modificados, char *file_tag);
 
-bool existe_en_storage(char *file, char *tag);
+bool tag_existe_en_storage(t_worker_config *cfg, int worker_id, int query_id, const char *file, const char *tag);
 
 #endif

@@ -262,17 +262,13 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
         }
 
         int index = 1;
-        char file_dest[64];
-        char tag_dest[64];
-
+        char file_dest[64], tag_dest[64];
         strcpy(file_dest, file_origen);
 
         do
         {
             sprintf(tag_dest, "tag_%d_0_0", index++);
-            char ruta[256];
-            sprintf(ruta, "%s/%s/%s", cfg->path_storage_files, file_dest, tag_dest);
-        } while (existe_en_storage(file_dest, tag_dest));
+        } while (tag_existe_en_storage(cfg, worker_id, query_id, file_dest, tag_dest));
 
         char comando_tag[256];
         sprintf(comando_tag, "TAG|%d|%s|%s|%s|%s", query_id, file_origen, tag_origen, file_dest, tag_dest);
@@ -543,10 +539,14 @@ bool existe_file_tag(t_list *archivos_modificados, char *file_tag)
     return list_any_satisfy(archivos_modificados, _coincide);
 }
 
-bool existe_en_storage(char *file, char *tag)
+bool tag_existe_en_storage(t_worker_config *cfg, int worker_id, int query_id, const char *file, const char *tag)
 {
-    char path[512];
-    sprintf(path, "./files/%s/%s", file, tag);
-    struct stat st;
-    return (stat(path, &st) == 0);
+    char comando[256];
+    sprintf(comando, "EXISTS_TAG|%s|%s", file, tag);
+
+    char respuesta[32];
+    if (!enviar_comando_storage(cfg, logger, worker_id, query_id, comando, respuesta, sizeof(respuesta)))
+        return false;
+
+    return (strcmp(respuesta, "EXISTS") == 0);
 }
