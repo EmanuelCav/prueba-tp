@@ -268,7 +268,7 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
         do
         {
             sprintf(tag_dest, "tag_%d_0_0", index++);
-        } while (tag_existe_en_storage(cfg, worker_id, query_id, file_dest, tag_dest));
+        } while (tag_existe_en_storage(cfg, logger, worker_id, query_id, file_dest, tag_dest));
 
         char comando_tag[256];
         sprintf(comando_tag, "TAG|%d|%s|%s|%s|%s", query_id, file_origen, tag_origen, file_dest, tag_dest);
@@ -539,7 +539,7 @@ bool existe_file_tag(t_list *archivos_modificados, char *file_tag)
     return list_any_satisfy(archivos_modificados, _coincide);
 }
 
-bool tag_existe_en_storage(t_worker_config *cfg, int worker_id, int query_id, const char *file, const char *tag)
+bool tag_existe_en_storage(t_worker_config *cfg, t_log *logger, int worker_id, int query_id, const char *file, const char *tag)
 {
     char comando[256];
     sprintf(comando, "EXISTS_TAG|%s|%s", file, tag);
