@@ -104,57 +104,47 @@ void *manejar_worker(void *arg)
     case CMD_CREATE:
     {
         usleep(cfg->retardo_operacion * 1000);
-        struct stat info;
-        sscanf(buffer_original, "%*[^|]|%d|%[^|]|%[^|]|%d", &query_id, file, tag, &tamanio);
+        int tamanio_inicial;
+        sscanf(buffer_original, "%*[^|]|%d|%[^|]|%[^|]|%d", &query_id, file, tag, &tamanio_inicial);
 
-        log_debug(logger, "Query %d: CREATE - File:%s Tag:%s Tamaño:%d", query_id, file, tag, tamanio);
+        log_debug(logger, "Query %d: CREATE - File:%s Tag:%s Tamaño:%d",
+                  query_id, file, tag, tamanio_inicial);
 
-        char path_tag[4096];
-        snprintf(path_tag, sizeof(path_tag), "%s/files/%s/%s", cfg->punto_montaje, file, tag);
-        log_debug(logger, "Query %d: Verificando existencia en: %s", query_id, path_tag);
+        char base_path[512];
+        sprintf(base_path, "%s/files/%s", cfg->punto_montaje, file);
 
-        if (stat(path_tag, &info) == 0 && S_ISDIR(info.st_mode))
+        char tag_path[512];
+        sprintf(tag_path, "%s/files/%s/%s", cfg->punto_montaje, file, tag);
+
+        char logical_path[512];
+        sprintf(logical_path, "%s/files/%s/%s/logical_blocks",
+                cfg->punto_montaje, file, tag);
+
+        mkdir(base_path, 0777);
+        mkdir(tag_path, 0777);
+        mkdir(logical_path, 0777);
+
+        char metadata_path[512];
+        sprintf(metadata_path, "%s/metadata.config", tag_path);
+
+        FILE *meta = fopen(metadata_path, "w");
+        if (!meta)
         {
-            log_error(logger, "STORAGE | CREATE | Error: File:Tag %s:%s ya existe.", file, tag);
-            char msg[64];
-            sprintf(msg, "ERR_FILE_TAG_ALREADY_EXIST");
-            send(client_sock, msg, strlen(msg), 0);
+            log_error(logger, "Error creando metadata: %s", metadata_path);
+            send(client_sock, "ERR_CREATE_METADATA", strlen("ERR_CREATE_METADATA"), 0);
             break;
         }
 
-        char path_file[4096];
-        snprintf(path_file, sizeof(path_file), "%s/files/%s", cfg->punto_montaje, file);
-        log_debug(logger, "Query %d: Creando directorios: %s", query_id, path_file);
-        mkdir(path_file, 0777);
-        mkdir(path_tag, 0777);
+        fprintf(meta, "TAMAÑO=0\n");
+        fprintf(meta, "BLOCKS=[]\n");
+        fprintf(meta, "ESTADO=UNCOMMITED\n");
+        fclose(meta);
 
-        char path_logical[4096];
-        snprintf(path_logical, sizeof(path_logical), "%s/files/%s/%s/logical_blocks", cfg->punto_montaje, file, tag);
-        mkdir(path_logical, 0777);
+        char resp[128];
+        sprintf(resp, "OK|CREATE|%s|%s", file, tag);
+        send(client_sock, resp, strlen(resp), 0);
 
-        char path_metadata[4096];
-        snprintf(path_metadata, sizeof(path_metadata), "%s/files/%s/%s/metadata.config", cfg->punto_montaje, file, tag);
-
-        FILE *meta = fopen(path_metadata, "w");
-        if (meta)
-        {
-            fprintf(meta, "TAMAÑO=%d\n", tamanio);
-            fprintf(meta, "BLOCKS=[]\n");
-            fprintf(meta, "ESTADO=WORK_IN_PROGRESS\n");
-            fclose(meta);
-            log_info(logger, "Archivo metadata creado: %s", path_metadata);
-        }
-        else
-        {
-            log_error(logger, "Error creando metadata: %s", path_metadata);
-            char respuesta[512];
-            sprintf(respuesta, "ERR_CREATION_METADATA");
-            send(client_sock, respuesta, strlen(respuesta), 0);
-        }
-        char respuesta[512];
-        sprintf(respuesta, "OK|CREATE|%s|%s", file, tag);
-        send(client_sock, respuesta, strlen(respuesta), 0);
-        log_info(logger, "## Query %d- File Creado %s:%s", query_id, file, tag);
+        log_info(logger, "## Query %d - File Creado %s:%s", query_id, file, tag);
         break;
     }
     case CMD_TRUNCATE:
