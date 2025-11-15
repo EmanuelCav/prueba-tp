@@ -282,12 +282,11 @@ void *atender_conexion(void *arg)
                 if (q)
                 {
                     q->program_counter = pc;
-                    q->timestamp_ready = (uint64_t)time(NULL); // Actualizar timestamp al volver a READ
+                    q->timestamp_ready = (uint64_t)time(NULL);
                     log_info(logger, "## Master: Query %d desalojada en PC=%d", query_id, pc);
                     list_remove_element(exec, q);
                     pthread_mutex_unlock(&mutex_exec);
 
-                    // Marcar worker como libre
                     for (int i = 0; i < cantidad_workers; i++)
                     {
                         if (workers[i].worker_id == worker_id)

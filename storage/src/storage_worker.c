@@ -15,7 +15,7 @@ comando_t parse_comando(const char *line)
 
     char buffer[256];
     strncpy(buffer, line, sizeof(buffer) - 1);
-    
+
     char *cmd = strtok(buffer, "|");
     log_debug(logger, "Comando extraído: [%s]", cmd);
 
@@ -50,7 +50,7 @@ void *manejar_worker(void *arg)
 {
     int client_sock = *(int *)arg;
     free(arg);
-    
+
     log_debug(logger, "Nuevo thread iniciado para manejar conexión (socket: %d)", client_sock);
 
     char buffer[256];
@@ -62,15 +62,15 @@ void *manejar_worker(void *arg)
         return NULL;
     }
     buffer[bytes] = '\0';
-    
+
     log_debug(logger, "Comando recibido: [%s] (%d bytes)", buffer, bytes);
-    
+
     char buffer_original[256];
     strcpy(buffer_original, buffer);
-    
+
     comando_t cmd = parse_comando(buffer_original);
     char *cmd_str = strtok(buffer, "|");
-    
+
     pthread_mutex_lock(&mutex_workers);
     cantidad_workers++;
     pthread_mutex_unlock(&mutex_workers);
@@ -106,13 +106,13 @@ void *manejar_worker(void *arg)
         usleep(cfg->retardo_operacion * 1000);
         struct stat info;
         sscanf(buffer_original, "%*[^|]|%d|%[^|]|%[^|]|%d", &query_id, file, tag, &tamanio);
-        
+
         log_debug(logger, "Query %d: CREATE - File:%s Tag:%s Tamaño:%d", query_id, file, tag, tamanio);
 
         char path_tag[4096];
         snprintf(path_tag, sizeof(path_tag), "%s/files/%s/%s", cfg->punto_montaje, file, tag);
         log_debug(logger, "Query %d: Verificando existencia en: %s", query_id, path_tag);
-        
+
         if (stat(path_tag, &info) == 0 && S_ISDIR(info.st_mode))
         {
             log_error(logger, "STORAGE | CREATE | Error: File:Tag %s:%s ya existe.", file, tag);
@@ -161,112 +161,159 @@ void *manejar_worker(void *arg)
     {
         usleep(cfg->retardo_operacion * 1000);
         sscanf(buffer_original, "%*[^|]|%d|%[^|]|%[^|]|%d", &query_id, file, tag, &tamanio);
-        
-        log_debug(logger, "Query %d: TRUNCATE - File:%s Tag:%s Nuevo tamaño:%d", query_id, file, tag, tamanio);
 
-        struct stat info;
+        log_debug(logger, "Query %d: TRUNCATE - File:%s Tag:%s Nuevo tamaño:%d",
+                  query_id, file, tag, tamanio);
+
         char path_filetag[4096];
         sprintf(path_filetag, "%s/files/%s/%s", cfg->punto_montaje, file, tag);
-        if (!(stat(path_filetag, &info) == 0 && S_ISDIR(info.st_mode)))
+
+        struct stat st;
+        if (!(stat(path_filetag, &st) == 0 && S_ISDIR(st.st_mode)))
         {
             log_error(logger, "STORAGE | TRUNCATE | Error: File:Tag %s:%s inexistente.", file, tag);
-            char msg[512] = "";
-            sprintf(msg, "ERR_TAG_NOT_FOUND");
-            send(client_sock, msg, strlen(msg), 0);
+            send(client_sock, "ERR_TAG_NOT_FOUND", 17, 0);
             break;
         }
 
-        int tamanio_actual = 0;
-        char estado[32] = "";
         char path_metadata[4096];
-        sprintf(path_metadata, "%s/files/%s/%s/metadata.config", cfg->punto_montaje, file, tag);
+        sprintf(path_metadata, "%s/files/%s/%s/metadata.config",
+                cfg->punto_montaje, file, tag);
+
+        int tamanio_actual = 0;
+        char estado[32] = "UNCOMMITED";
+        t_list *bloques = list_create();
 
         FILE *meta = fopen(path_metadata, "r");
         if (meta)
         {
-            char linea[128];
+            char linea[256];
+
             while (fgets(linea, sizeof(linea), meta))
             {
                 if (sscanf(linea, "TAMAÑO=%d", &tamanio_actual) == 1)
                     continue;
-                if (sscanf(linea, "ESTADO=%s", estado) == 1)
-                    break;
+
+                if (strstr(linea, "BLOCKS=["))
+                {
+                    char *bloques_str = strchr(linea, '[') + 1;
+                    char *token = strtok(bloques_str, ",]");
+
+                    while (token)
+                    {
+                        list_add(bloques, (void *)atoi(token));
+                        token = strtok(NULL, ",]");
+                    }
+                }
+
+                sscanf(linea, "ESTADO=%s", estado);
             }
             fclose(meta);
         }
+
         if (strcmp(estado, "COMMITED") == 0)
         {
-            log_error(logger, "STORAGE | TRUNCATE | Error, intento de truncado de filetag en estado COMMITED. File:%s Tag:%s", file, tag);
-            char msg[512] = "";
-            sprintf(msg, "ERR_TAG_COMMITED");
-            send(client_sock, msg, strlen(msg), 0);
+            log_error(logger, "STORAGE | TRUNCATE | Error: intento de truncado en estado COMMITED.");
+            send(client_sock, "ERR_TAG_COMMITED", 16, 0);
+            list_destroy(bloques);
             break;
         }
 
-        int cant_bloques = 0;
-        int bloques_actuales = tamanio_actual / cfg->block_size;
-        log_debug(logger, "Query %d: Tamaño actual:%d bloques:%d - Nuevo tamaño:%d", 
-                  query_id, tamanio_actual, bloques_actuales, tamanio);
-        
-        if (tamanio > tamanio_actual)
+        int bloques_actuales = list_size(bloques);
+        int bloques_nuevos = tamanio / cfg->block_size;
+
+        log_debug(logger, "Query %d: Bloques actuales:%d - Bloques nuevos:%d",
+                  query_id, bloques_actuales, bloques_nuevos);
+
+        if (bloques_nuevos > bloques_actuales)
         {
-            cant_bloques = (tamanio - tamanio_actual) / cfg->block_size;
-            log_debug(logger, "Query %d: Expandiendo archivo, agregar %d bloques", query_id, cant_bloques);
+            int faltan = bloques_nuevos - bloques_actuales;
+            log_debug(logger, "Query %d: Agregando %d bloques nuevos", query_id, faltan);
 
-            int num_bloque = 0;
-            char bloque_nombre[16];
+            char path_fisico_0[4096];
+            sprintf(path_fisico_0, "%s/physical_blocks/block000000.dat", cfg->punto_montaje);
 
-            // Todos los nuevos bloques lógicos apuntan al bloque físico 0
-            char path_fisico_0[512];
-            sprintf(path_fisico_0, "%s/physical_blocks/block0000.dat", cfg->punto_montaje);
-            
-            for (int i = 0; i < cant_bloques; i++)
+            for (int i = 0; i < faltan; i++)
             {
                 usleep(cfg->retardo_acceso_bloque * 1000);
-                
-                num_bloque = bloques_actuales + i;
-                sprintf(bloque_nombre, "%06d", num_bloque);
 
-                char path_logical_block[4096];
-                snprintf(path_logical_block, sizeof(path_logical_block),
-                         "%s/files/%s/%s/logical_blocks/%s.dat", cfg->punto_montaje, file, tag, bloque_nombre);
+                int num_bloque_logico = bloques_actuales + i;
 
-                log_debug(logger, "Creando enlace lógico: %s -> %s", path_logical_block, path_fisico_0);
-                
-                if (link(path_fisico_0, path_logical_block) != 0)
+                char nombre_bloque[32];
+                sprintf(nombre_bloque, "%06d", num_bloque_logico);
+
+                char path_logico[4096];
+                sprintf(path_logico, "%s/files/%s/%s/logical_blocks/%s.dat",
+                        cfg->punto_montaje, file, tag, nombre_bloque);
+
+                char path_dir[4096];
+                sprintf(path_dir, "%s/files/%s/%s/logical_blocks",
+                        cfg->punto_montaje, file, tag);
+                mkdir(path_dir, 0777);
+
+                unlink(path_logico);
+
+                log_debug(logger, "Creando enlace lógico: %s -> %s",
+                          path_logico, path_fisico_0);
+
+                if (link(path_fisico_0, path_logico) != 0)
                 {
-                    log_error(logger, "STORAGE | TRUNCATE | Error creando enlace lógico: %s -> %s",
-                              path_logical_block, path_fisico_0);
+                    log_error(logger,
+                              "Error creando enlace: %s -> %s (errno=%d %s)",
+                              path_logico, path_fisico_0,
+                              errno, strerror(errno));
                     continue;
                 }
 
-                // Todos los bloques apuntan al bloque físico 0
-                actualizar_metadata_agregar(path_metadata, 0);
-
-                log_info(logger, "STORAGE | TRUNCATE | Bloque lógico %s vinculado a físico 0", bloque_nombre);
+                list_add(bloques, (void *)0);
+                log_info(logger, "STORAGE | TRUNCATE | Bloque lógico %s creado.", nombre_bloque);
             }
         }
-        else
+        else if (bloques_nuevos < bloques_actuales)
         {
-            cant_bloques = (tamanio_actual - tamanio) / cfg->block_size;
-            log_debug(logger, "Query %d: Reduciendo archivo, eliminar %d bloques", query_id, cant_bloques);
+            int sobran = bloques_actuales - bloques_nuevos;
+            log_debug(logger, "Query %d: Eliminando %d bloques", query_id, sobran);
 
-            int num_bloque = 0;
-            char bloque_nombre[7];
-            for (int i = 0; i < cant_bloques; i++)
+            for (int i = 0; i < sobran; i++)
             {
-                num_bloque = bloques_actuales - i;
-                sprintf(bloque_nombre, "%06d", num_bloque);
-                char path_logical_block[4096];
-                snprintf(path_logical_block, sizeof(path_logical_block), "./files/%s/%s/logical_blocks/%s.dat", file, tag, bloque_nombre);
-                sacar_bloque_filetag(client_sock, file, tag, path_metadata, path_logical_block, logger);
+                int idx = list_size(bloques) - 1;
+                char nombre_bloque[32];
+                sprintf(nombre_bloque, "%06d", idx);
+
+                char path_logico[4096];
+                sprintf(path_logico, "%s/files/%s/%s/logical_blocks/%s.dat",
+                        cfg->punto_montaje, file, tag, nombre_bloque);
+
+                unlink(path_logico);
+                list_remove(bloques, idx);
+
+                log_info(logger, "STORAGE | TRUNCATE | Bloque %s eliminado.", nombre_bloque);
             }
         }
 
-        char respuesta[512];
+        meta = fopen(path_metadata, "w");
+        fprintf(meta, "TAMAÑO=%d\n", tamanio);
+        fprintf(meta, "BLOCKS=[");
+
+        for (int i = 0; i < list_size(bloques); i++)
+        {
+            fprintf(meta, "%d", (int)list_get(bloques, i));
+            if (i < list_size(bloques) - 1)
+                fprintf(meta, ",");
+        }
+
+        fprintf(meta, "]\n");
+        fprintf(meta, "ESTADO=UNCOMMITED\n");
+        fclose(meta);
+
+        list_destroy(bloques);
+
+        char respuesta[64];
         sprintf(respuesta, "OK|TRUNCATE|%s|%s", file, tag);
         send(client_sock, respuesta, strlen(respuesta), 0);
-        log_info(logger, "##%d - File Truncado %s:%s - Tamaño: %d", query_id, file, tag, tamanio);
+
+        log_info(logger, "##%d - File Truncado %s:%s - Tamaño final: %d",
+                 query_id, file, tag, tamanio);
         break;
     }
     case CMD_WRITE:
@@ -275,7 +322,7 @@ void *manejar_worker(void *arg)
         int num_bloque;
         char contenido[1024];
         sscanf(buffer_original, "%*[^|]|%d|%[^|]|%[^|]|%d|%[^\n]", &query_id, file, tag, &num_bloque, contenido);
-        
+
         log_debug(logger, "Query %d: WRITE - File:%s Tag:%s Bloque:%d", query_id, file, tag, num_bloque);
 
         char path_metadata[1024];
@@ -285,8 +332,7 @@ void *manejar_worker(void *arg)
         if (stat(path_metadata, &info) != 0)
         {
             log_error(logger, "STORAGE | WRITE | Error: File:Tag %s:%s inexistente.", file, tag);
-            char msg[128] = "ERR_TAG_NOT_FOUND";
-            send(client_sock, msg, strlen(msg), 0);
+            send(client_sock, "ERR_TAG_NOT_FOUND", strlen("ERR_TAG_NOT_FOUND"), 0);
             break;
         }
 
@@ -294,60 +340,78 @@ void *manejar_worker(void *arg)
         if (!meta)
         {
             log_error(logger, "STORAGE | WRITE | Error abriendo metadata %s", path_metadata);
-            send(client_sock, "ERR_OPEN_METADATA", 18, 0);
+            send(client_sock, "ERR_OPEN_METADATA", strlen("ERR_OPEN_METADATA"), 0);
             break;
         }
 
-        char estado[32] = "";
-        char bloques_linea[512] = "";
-        while (fgets(bloques_linea, sizeof(bloques_linea), meta))
-        {
-            if (sscanf(bloques_linea, "ESTADO=%s", estado) == 1)
-                break;
-        }
-        rewind(meta);
+        char meta_buf[4096] = {0};
+        char linea_aux[512];
+        while (fgets(linea_aux, sizeof(linea_aux), meta))
+            strncat(meta_buf, linea_aux, sizeof(meta_buf) - strlen(meta_buf) - 1);
+        fclose(meta);
+
+        char estado[32] = "UNCOMMITED";
+        char *p_estado = strstr(meta_buf, "ESTADO=");
+        if (p_estado)
+            sscanf(p_estado, "ESTADO=%31s", estado);
 
         if (strcmp(estado, "COMMITED") == 0)
         {
             log_error(logger, "STORAGE | WRITE | Error: intento de escritura sobre File:Tag COMMITED (%s:%s)", file, tag);
-            char msg[128] = "ERR_TAG_COMMITED";
-            send(client_sock, msg, strlen(msg), 0);
-            fclose(meta);
+            send(client_sock, "ERR_TAG_COMMITED", strlen("ERR_TAG_COMMITED"), 0);
             break;
         }
 
         int bloques_fisicos[256];
         int cant_bloques = 0;
-        char linea[512];
-        while (fgets(linea, sizeof(linea), meta))
+        char *p_blocks = strstr(meta_buf, "BLOCKS=[");
+        if (p_blocks)
         {
-            if (strstr(linea, "BLOCKS=["))
-            {
-                char *inicio = strchr(linea, '[') + 1;
-                char *fin = strchr(linea, ']');
+            char *inicio = strchr(p_blocks, '[');
+            if (inicio)
+                inicio++;
+            char *fin = inicio ? strchr(inicio, ']') : NULL;
+            if (fin)
                 *fin = '\0';
+
+            if (inicio)
+            {
+                char *nl = strchr(inicio, '\n');
+                if (nl)
+                    *nl = '\0';
+
                 char *token = strtok(inicio, ",");
                 while (token)
                 {
-                    bloques_fisicos[cant_bloques++] = atoi(token);
+                    while (*token == ' ' || *token == '\t')
+                        token++;
+                    char *end = token + strlen(token) - 1;
+                    while (end > token && (*end == ' ' || *end == '\t' || *end == '\r' || *end == '\n'))
+                    {
+                        *end = '\0';
+                        end--;
+                    }
+
+                    if (strlen(token) > 0)
+                    {
+                        bloques_fisicos[cant_bloques++] = atoi(token);
+                    }
                     token = strtok(NULL, ",");
                 }
-                break;
             }
         }
-        fclose(meta);
 
         if (num_bloque >= cant_bloques)
         {
             log_error(logger, "STORAGE | WRITE | Error: Bloque lógico fuera de rango. File:%s Tag:%s", file, tag);
-            send(client_sock, "ERR_BLOCK_OUT_OF_RANGE", 24, 0);
+            send(client_sock, "ERR_BLOCK_OUT_OF_RANGE", strlen("ERR_BLOCK_OUT_OF_RANGE"), 0);
             break;
         }
 
         int bloque_fisico = bloques_fisicos[num_bloque];
         char path_fisico[512];
-        sprintf(path_fisico, "./physical_blocks/block%06d.dat", bloque_fisico);
-        
+        sprintf(path_fisico, "%s/physical_blocks/block%06d.dat", cfg->punto_montaje, bloque_fisico);
+
         log_debug(logger, "Query %d: Bloque lógico %d -> físico %d", query_id, num_bloque, bloque_fisico);
 
         struct stat st;
@@ -355,7 +419,7 @@ void *manejar_worker(void *arg)
 
         if (st.st_nlink > 1)
         {
-            log_debug(logger, "Query %d: Bloque físico %d tiene %ld enlaces (COW requerido)", 
+            log_debug(logger, "Query %d: Bloque físico %d tiene %ld enlaces (COW requerido)",
                       query_id, bloque_fisico, (long)st.st_nlink);
             log_info(logger, "COW | Bloque %d compartido → generando copia...", bloque_fisico);
 
@@ -363,16 +427,16 @@ void *manejar_worker(void *arg)
             if (nuevo_bloque < 0)
             {
                 log_debug(logger, "Query %d: Error en COW, no se pudo copiar bloque %d", query_id, bloque_fisico);
-                send(client_sock, "ERR_COW_COPY", 12, 0);
+                send(client_sock, "ERR_COW_COPY", strlen("ERR_COW_COPY"), 0);
                 break;
             }
-            
+
             log_debug(logger, "Query %d: COW exitoso, nuevo bloque físico: %d", query_id, nuevo_bloque);
 
             metadata_reemplazar_bloque(path_metadata, num_bloque, nuevo_bloque);
 
             bloque_fisico = nuevo_bloque;
-            sprintf(path_fisico, "./physical_blocks/block%06d.dat", nuevo_bloque);
+            sprintf(path_fisico, "%s/physical_blocks/block%06d.dat", cfg->punto_montaje, nuevo_bloque);
         }
 
         usleep(cfg->retardo_operacion * 1000);
@@ -382,7 +446,7 @@ void *manejar_worker(void *arg)
         if (!fp)
         {
             log_error(logger, "STORAGE | WRITE | Error abriendo bloque físico %s", path_fisico);
-            send(client_sock, "ERR_OPEN_BLOCK", 15, 0);
+            send(client_sock, "ERR_OPEN_BLOCK", strlen("ERR_OPEN_BLOCK"), 0);
             break;
         }
 
@@ -412,7 +476,7 @@ void *manejar_worker(void *arg)
         usleep(cfg->retardo_operacion * 1000);
         int num_bloque;
         sscanf(buffer_original, "%*[^|]|%d|%[^|]|%[^|]|%d", &query_id, file, tag, &num_bloque);
-        
+
         log_debug(logger, "Query %d: READ - File:%s Tag:%s Bloque:%d", query_id, file, tag, num_bloque);
 
         char path_metadata[1024];
@@ -422,7 +486,7 @@ void *manejar_worker(void *arg)
         if (stat(path_metadata, &info) != 0)
         {
             log_error(logger, "STORAGE | READ | Error: File:Tag %s:%s inexistente.", file, tag);
-            send(client_sock, "ERR_TAG_NOT_FOUND", 18, 0);
+            send(client_sock, "ERR_TAG_NOT_FOUND", strlen("ERR_TAG_NOT_FOUND"), 0);
             break;
         }
 
@@ -430,42 +494,67 @@ void *manejar_worker(void *arg)
         if (!meta)
         {
             log_error(logger, "STORAGE | READ | Error abriendo metadata %s", path_metadata);
-            send(client_sock, "ERR_OPEN_METADATA", 18, 0);
+            send(client_sock, "ERR_OPEN_METADATA", strlen("ERR_OPEN_METADATA"), 0);
             break;
         }
 
+        char meta_buf[4096] = {0};
+        char linea_aux2[512];
+        while (fgets(linea_aux2, sizeof(linea_aux2), meta))
+            strncat(meta_buf, linea_aux2, sizeof(meta_buf) - strlen(meta_buf) - 1);
+        fclose(meta);
+
         int bloques_fisicos[256];
         int cant_bloques = 0;
-        char linea[512];
-        while (fgets(linea, sizeof(linea), meta))
+        char *p_blocks2 = strstr(meta_buf, "BLOCKS=[");
+        if (p_blocks2)
         {
-            if (strstr(linea, "BLOCKS=["))
-            {
-                char *inicio = strchr(linea, '[') + 1;
-                char *fin = strchr(linea, ']');
+            char *inicio = strchr(p_blocks2, '[');
+            if (inicio)
+                inicio++;
+            char *fin = inicio ? strchr(inicio, ']') : NULL;
+            if (fin)
                 *fin = '\0';
+
+            if (inicio)
+            {
+                char *nl = strchr(inicio, '\n');
+                if (nl)
+                    *nl = '\0';
+
                 char *token = strtok(inicio, ",");
                 while (token)
                 {
-                    bloques_fisicos[cant_bloques++] = atoi(token);
+                    while (*token == ' ' || *token == '\t')
+                        token++;
+                    char *end = token + strlen(token) - 1;
+                    while (end > token && (*end == ' ' || *end == '\t' || *end == '\r' || *end == '\n'))
+                    {
+                        *end = '\0';
+                        end--;
+                    }
+
+                    if (strlen(token) > 0)
+                    {
+                        bloques_fisicos[cant_bloques++] = atoi(token);
+                    }
                     token = strtok(NULL, ",");
                 }
-                break;
             }
         }
-        fclose(meta);
 
         if (num_bloque >= cant_bloques)
         {
-            log_error(logger, "STORAGE | READ | Error: Bloque lógico fuera de rango. File:%s Tag:%s", file, tag);
-            send(client_sock, "ERR_BLOCK_OUT_OF_RANGE", 24, 0);
+            log_error(logger, "STORAGE | READ | Error: Bloque lógico fuera de rango. File:%s Tag:%s (pedido: %d, disponibles: %d)",
+                      file, tag, num_bloque, cant_bloques);
+            send(client_sock, "ERR_BLOCK_OUT_OF_RANGE", strlen("ERR_BLOCK_OUT_OF_RANGE"), 0);
             break;
         }
 
         int bloque_fisico = bloques_fisicos[num_bloque];
         char path_fisico[512];
-        sprintf(path_fisico, "./physical_blocks/block%06d.dat", bloque_fisico);
-        
+        sprintf(path_fisico, "%s/physical_blocks/block%06d.dat", cfg->punto_montaje, bloque_fisico);
+
         log_debug(logger, "Query %d: Leyendo bloque lógico %d -> físico %d", query_id, num_bloque, bloque_fisico);
 
         usleep(cfg->retardo_operacion * 1000);
@@ -475,7 +564,7 @@ void *manejar_worker(void *arg)
         if (!fp)
         {
             log_error(logger, "STORAGE | READ | Error abriendo bloque físico %s", path_fisico);
-            send(client_sock, "ERR_OPEN_BLOCK", 15, 0);
+            send(client_sock, "ERR_OPEN_BLOCK", strlen("ERR_OPEN_BLOCK"), 0);
             break;
         }
 
@@ -499,8 +588,8 @@ void *manejar_worker(void *arg)
         usleep(cfg->retardo_operacion * 1000);
         char tag_origen[64], tag_destino[64];
         sscanf(buffer_original, "%*[^|]|%d|%[^|]|%[^|]|%[^|]", &query_id, file, tag_origen, tag_destino);
-        
-        log_debug(logger, "Query %d: TAG - File:%s Origen:%s -> Destino:%s", 
+
+        log_debug(logger, "Query %d: TAG - File:%s Origen:%s -> Destino:%s",
                   query_id, file, tag_origen, tag_destino);
 
         char path_origen[512], path_destino[512];
@@ -605,7 +694,7 @@ void *manejar_worker(void *arg)
     case CMD_COMMIT:
     {
         sscanf(buffer_original, "%*[^|]|%d|%[^|]|%[^|]", &query_id, file, tag);
-        
+
         log_debug(logger, "Query %d: COMMIT - File:%s Tag:%s", query_id, file, tag);
 
         char path_metadata[1024];
@@ -653,7 +742,7 @@ void *manejar_worker(void *arg)
         fclose(meta);
         fclose(tmp);
         rename(temp_path, path_metadata);
-        
+
         log_debug(logger, "Query %d: Actualizando hash de %d bloques", query_id, cant);
 
         for (int i = 0; i < cant; i++)
@@ -667,10 +756,9 @@ void *manejar_worker(void *arg)
     {
         usleep(cfg->retardo_operacion * 1000);
         sscanf(buffer_original, "%*[^|]|%d|%[^|]|%[^|]", &query_id, file, tag);
-        
+
         log_debug(logger, "Query %d: DELETE - File:%s Tag:%s", query_id, file, tag);
 
-        // Proteger initial_file/BASE: no se puede borrar
         if (strcmp(file, "initial_file") == 0 && strcmp(tag, "BASE") == 0)
         {
             send(client_sock, "ERR_CANNOT_DELETE_INITIAL_FILE", 31, 0);
@@ -721,7 +809,7 @@ void *manejar_worker(void *arg)
 
         char path_logical_block[512];
         log_debug(logger, "Query %d: Liberando %d bloques de %s:%s", query_id, cant, file, tag);
-        
+
         for (int i = 0; i < cant; i++)
         {
             sprintf(path_logical_block, "%s/files/%s/%s/logical_blocks/%06d.dat", cfg->punto_montaje, file, tag, i);
@@ -1046,7 +1134,7 @@ void actualizar_blocks_hash_index(int num_bloque, t_log *logger)
 
     char index_path[1024];
     snprintf(index_path, sizeof(index_path), "%s/blocks_hash_index.config", cfg->punto_montaje);
-    
+
     FILE *index = fopen(index_path, "r+");
     if (!index)
         index = fopen(index_path, "w");

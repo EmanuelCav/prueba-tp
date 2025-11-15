@@ -135,10 +135,10 @@ void crear_archivo_inicial(const char *root_path, int block_size, t_log *logger)
     }
 
     char path_logical_block0[4096];
-    len = snprintf(path_logical_block0, sizeof(path_logical_block0), "%s/logical_blocks/block0000.dat", path_tag);
+    len = snprintf(path_logical_block0, sizeof(path_logical_block0), "%s/logical_blocks/block%06d.dat", path_tag, 0);
     if (len >= sizeof(path_logical_block0))
     {
-        log_error(logger, "Ruta demasiado larga: %s/logical_blocks/block0000.dat", path_tag);
+        log_error(logger, "Ruta demasiado larga: %s/logical_blocks/block%06d.dat", path_tag, 0);
         exit(EXIT_FAILURE);
     }
 

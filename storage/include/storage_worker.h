@@ -14,6 +14,7 @@
 #include <sys/mman.h>
 #include <openssl/md5.h>
 #include <dirent.h>
+#include <errno.h>
 
 #include "../include/storage_config.h"
 
