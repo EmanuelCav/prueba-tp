@@ -51,7 +51,7 @@ void recibir_query(int sock_master, int *query_id, char *path_query, int *priori
     log_info(logger, "## Query %d: Se recibe la Query. El path de operaciones es: %s", *query_id, path_query);
 }
 
-int consultar_storage(t_worker_config *cfg, t_log *logger, int worker_id)
+int consultar_storage(t_worker_config *cfg, t_log *logger)
 {
     char puerto_str[6];
     sprintf(puerto_str, "%d", cfg->puerto_storage);
@@ -63,19 +63,36 @@ int consultar_storage(t_worker_config *cfg, t_log *logger, int worker_id)
         exit(EXIT_FAILURE);
     }
 
-    send(sock_storage, &worker_id, sizeof(int), 0);
-
     const char *mensaje = "GET_BLOCK_SIZE";
-    send(sock_storage, mensaje, strlen(mensaje), 0);
+    if (send(sock_storage, mensaje, strlen(mensaje), 0) < 0)
+    {
+        log_error(logger, "Error enviando GET_BLOCK_SIZE al Storage");
+        close(sock_storage);
+        exit(EXIT_FAILURE);
+    }
 
     char respuesta[64];
     int bytes = recv(sock_storage, respuesta, sizeof(respuesta) - 1, 0);
+    if (bytes <= 0)
+    {
+        log_error(logger, "Error recibiendo tamaño de bloque del Storage");
+        close(sock_storage);
+        exit(EXIT_FAILURE);
+    }
 
     respuesta[bytes] = '\0';
     int tamanio_bloque = atoi(respuesta);
 
+    if (tamanio_bloque <= 0)
+    {
+        log_error(logger, "Tamaño de bloque inválido recibido del Storage: %s", respuesta);
+        close(sock_storage);
+        exit(EXIT_FAILURE);
+    }
+
     log_info(logger, "## Worker: Tamaño de bloque recibido desde Storage: %d bytes", tamanio_bloque);
 
     close(sock_storage);
+
     return tamanio_bloque;
 }

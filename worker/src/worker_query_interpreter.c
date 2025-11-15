@@ -48,303 +48,279 @@ t_instruccion instr_to_enum(char *line)
     }
 }
 
-void query_interpretar(char *line, int query_id, char *path_query, t_log *logger, t_memoria_interna *memoria, t_worker_config *cfg, int sock_master, t_list *archivos_modificados, int worker_id)
+void query_interpretar(char *line, int query_id, char *path_query, t_log *logger, t_memoria_interna *memoria, t_worker_config *cfg, int sock_master, t_list *archivos_modificados)
 {
+    log_debug(logger, "Query %d: Iniciando interpretación de instrucción: %s", query_id, line);
+    
     usleep(cfg->retardo_memoria * 1000);
 
     char buffer[512];
-    strncpy(buffer, line, sizeof(buffer) - 1);
-    buffer[sizeof(buffer) - 1] = '\0';
-
-    char *instr = strtok(buffer, " ");
+    strcpy(buffer, line);
+    
+    char *instruccion = strtok(buffer, " ");
     char *params = strtok(NULL, "");
-
-    t_instruccion instr_enum = instr_to_enum(instr);
-    int instr_val = instr_enum;
-
+    
     char file[64], tag[64];
     int direccion, tamanio;
     char contenido[256];
 
-    if (instr_val != INS_TAG && instr_val != INS_COMMIT && instr_val != INS_FLUSH && instr_val != INS_READ)
+    if (instr_to_enum(line) != INS_TAG && instr_to_enum(line) != INS_COMMIT && instr_to_enum(line) != INS_FLUSH && instr_to_enum(line) != INS_READ)
     {
-        if (params != NULL)
+        sscanf(params, "%[^:]:%s", file, tag);
+        char *file_tag = string_from_format("%s:%s", file, tag);
+        if (!existe_file_tag(archivos_modificados, file_tag))
         {
-            if (sscanf(params, "%63[^:]:%63s", file, tag) == 2)
-            {
-                char *file_tag = string_from_format("%s:%s", file, tag);
-                if (!existe_file_tag(archivos_modificados, file_tag))
-                {
-                    list_add(archivos_modificados, string_duplicate(file_tag));
-                }
-                free(file_tag);
-            }
-            else
-            {
-                log_warning(logger, "## Query %d: Parámetros incompletos al intentar registrar file:tag: '%s'", query_id, params);
-            }
+            list_add(archivos_modificados, string_duplicate(file_tag));
         }
+        free(file_tag);
     }
 
-    switch (instr_val)
+    switch (instr_to_enum(line))
     {
     case INS_CREATE:
-        if (params == NULL)
+        sscanf(params, "%[^:]:%s", file, tag);
+        
+        log_debug(logger, "Query %d: CREATE - File:%s Tag:%s", query_id, file, tag);
+
+        char comando_create[256];
+        sprintf(comando_create, "CREATE|%d|%s|%s|0", query_id, file, tag);
+        char respuesta_create[64];
+
+        if (enviar_comando_storage(cfg, logger, query_id, comando_create, respuesta_create, sizeof(respuesta_create)))
         {
-            log_error(logger, "## Query %d: CREATE sin parámetros (se esperaba file:tag)", query_id);
-            break;
+            log_info(logger, "## Query %d: - Instrucción realizada: CREATE %s:%s", query_id, file, tag);
         }
-        if (sscanf(params, "%63[^:]:%63s", file, tag) != 2)
+        else
         {
-            log_error(logger, "## Query %d: CREATE parámetros inválidos: '%s'", query_id, params);
-            break;
+            log_error(logger, "## Query %d: Error en CREATE %s:%s", query_id, file, tag);
         }
 
-        {
-            char comando_create[256];
-            sprintf(comando_create, "CREATE|%d|%s|%s|0", query_id, file, tag);
-            char respuesta_create[64];
-
-            if (enviar_comando_storage(cfg, logger, worker_id, query_id, comando_create, respuesta_create, sizeof(respuesta_create)))
-                log_info(logger, "## Query %d: - Instrucción realizada: CREATE %s:%s", query_id, file, tag);
-            else
-                log_error(logger, "## Query %d: Error en CREATE %s:%s", query_id, file, tag);
-        }
         break;
 
     case INS_TRUNCATE:
-        if (params == NULL)
-        {
-            log_error(logger, "## Query %d: TRUNCATE sin parámetros", query_id);
-            break;
-        }
-        if (sscanf(params, "%63[^:]:%63s %d", file, tag, &tamanio) != 3)
-        {
-            log_error(logger, "## Query %d: TRUNCATE parámetros inválidos: '%s'", query_id, params);
-            break;
-        }
+        sscanf(params, "%[^:]:%s %d", file, tag, &tamanio);
 
-        {
-            char comando_truncate[256];
-            sprintf(comando_truncate, "TRUNCATE|%d|%s|%s|%d", query_id, file, tag, tamanio);
-            char respuesta_truncate[64];
+        char comando_truncate[256];
+        sprintf(comando_truncate, "TRUNCATE|%d|%s|%s|%d", query_id, file, tag, tamanio);
+        char respuesta_truncate[64];
 
-            if (enviar_comando_storage(cfg, logger, worker_id, query_id, comando_truncate, respuesta_truncate, sizeof(respuesta_truncate)))
-                log_info(logger, "## Query %d: - Instrucción realizada: TRUNCATE %s:%s tamaño %d", query_id, file, tag, tamanio);
-            else
-                log_error(logger, "## Query %d: Error en TRUNCATE %s:%s tamaño %d", query_id, file, tag, tamanio);
+        if (enviar_comando_storage(cfg, logger, query_id, comando_truncate, respuesta_truncate, sizeof(respuesta_truncate)))
+        {
+            log_info(logger, "## Query %d: - Instrucción realizada: TRUNCATE %s:%s tamaño %d", query_id, file, tag, tamanio);
+        }
+        else
+        {
+            log_error(logger, "## Query %d: Error en TRUNCATE %s:%s tamaño %d", query_id, file, tag, tamanio);
         }
         break;
 
     case INS_WRITE:
-        if (params == NULL)
-        {
-            log_error(logger, "## Query %d: WRITE sin parámetros", query_id);
-            break;
-        }
-        if (sscanf(params, "%63[^:]:%63s %d %[^\n]", file, tag, &direccion, contenido) < 3)
-        {
-            log_error(logger, "## Query %d: WRITE parámetros inválidos: '%s'", query_id, params);
-            break;
-        }
+    {
+        sscanf(params, "%[^:]:%s %d %[^\n]", file, tag, &direccion, contenido);
+        int numero_pagina = direccion / memoria->tamanio_pagina;
+        
+        log_debug(logger, "Query %d: WRITE - File:%s Tag:%s Dir:%d Pag:%d Contenido:%s", 
+                  query_id, file, tag, direccion, numero_pagina, contenido);
 
-        {
-            int numero_pagina = direccion / memoria->tamanio_pagina;
-            int marco_existente = buscar_pagina_en_memoria(memoria, file, tag, numero_pagina);
+        int marco_existente = buscar_pagina_en_memoria(memoria, file, tag, numero_pagina);
+        
+        log_debug(logger, "Query %d: Marco existente: %d", query_id, marco_existente);
 
-            if (marco_existente == -1)
+        if (marco_existente == -1)
+        {
+            int marco_libre = buscar_marco_libre(memoria);
+            log_debug(logger, "Query %d: WRITE - Marco libre encontrado: %d", query_id, marco_libre);
+            
+            if (marco_libre == -1)
             {
-                int marco_libre = buscar_marco_libre(memoria);
-                if (marco_libre == -1)
-                {
-                    int victima = -1;
-                    if (strcmp(cfg->algoritmo_reemplazo, "LRU") == 0)
-                        victima = seleccionar_victima_LRU(memoria);
-                    else if (strcmp(cfg->algoritmo_reemplazo, "CLOCK-M") == 0)
-                        victima = seleccionar_victima_CLOCKM(memoria);
+                log_debug(logger, "Query %d: WRITE - Memoria llena, aplicando %s", 
+                          query_id, cfg->algoritmo_reemplazo);
+                
+                int victima = -1;
+                if (strcmp(cfg->algoritmo_reemplazo, "LRU") == 0)
+                    victima = seleccionar_victima_LRU(memoria);
+                else if (strcmp(cfg->algoritmo_reemplazo, "CLOCK-M") == 0)
+                    victima = seleccionar_victima_CLOCKM(memoria);
+                
+                log_debug(logger, "Query %d: WRITE - Victima seleccionada: marco %d", query_id, victima);
 
-                    log_info(logger,
-                             "## \nQuery %d:\nSe reemplaza la página %s:%s/%d por la %s:%s/%d",
-                             query_id,
-                             memoria->marcos[victima].file,
-                             memoria->marcos[victima].tag,
-                             memoria->marcos[victima].numero_pagina,
-                             file,
-                             tag,
-                             numero_pagina);
+                log_info(logger,
+                         "## \nQuery %d:\nSe reemplaza la página %s:%s/%d por la %s:%s/%d",
+                         query_id,
+                         memoria->marcos[victima].file,
+                         memoria->marcos[victima].tag,
+                         memoria->marcos[victima].numero_pagina,
+                         file,
+                         tag,
+                         numero_pagina);
 
-                    if (memoria->marcos[victima].modificada)
-                        flush_file_to_storage(cfg, logger, query_id, memoria,
-                                              memoria->marcos[victima].file, memoria->marcos[victima].tag, worker_id);
+                if (memoria->marcos[victima].modificada)
+                    flush_file_to_storage(cfg, logger, query_id, memoria,
+                                          memoria->marcos[victima].file, memoria->marcos[victima].tag);
 
-                    liberar_marco(memoria, victima, logger);
-                    marco_libre = victima;
-                }
-
-                asignar_pagina(memoria, marco_libre, numero_pagina, file, tag, logger);
-                cargar_pagina_desde_storage(cfg, logger, query_id, memoria, marco_libre, file, tag, numero_pagina, worker_id);
-                marco_existente = marco_libre;
+                liberar_marco(memoria, victima, query_id, logger);
+                marco_libre = victima;
             }
 
-            escribir_memoria(memoria, direccion, contenido, logger, query_id);
-            log_info(logger, "## Query %d: - Instrucción realizada: WRITE %s:%s (%s)", query_id, file, tag, contenido);
+            asignar_pagina(memoria, marco_libre, numero_pagina, file, tag, query_id, logger);
+            cargar_pagina_desde_storage(cfg, logger, query_id, memoria, marco_libre, file, tag, numero_pagina);
+            marco_existente = marco_libre;
         }
-        break;
+
+        escribir_memoria(memoria, direccion, contenido, logger, query_id);
+        log_info(logger, "## Query %d: - Instrucción realizada: WRITE %s:%s (%s)",
+                 query_id, file, tag, contenido);
+    }
+    break;
 
     case INS_READ:
-        if (params == NULL)
-        {
-            log_error(logger, "## Query %d: READ sin parámetros", query_id);
-            break;
-        }
-        if (sscanf(params, "%63[^:]:%63s %d %d", file, tag, &direccion, &tamanio) != 4)
-        {
-            log_error(logger, "## Query %d: READ parámetros inválidos: '%s'", query_id, params);
-            break;
-        }
+    {
+        sscanf(params, "%[^:]:%s %d %d", file, tag, &direccion, &tamanio);
+        int numero_pagina = direccion / memoria->tamanio_pagina;
+        
+        log_debug(logger, "Query %d: READ - File:%s Tag:%s Dir:%d Tam:%d Pag:%d", 
+                  query_id, file, tag, direccion, tamanio, numero_pagina);
 
-        {
-            int numero_pagina = direccion / memoria->tamanio_pagina;
-            int marco_existente = buscar_pagina_en_memoria(memoria, file, tag, numero_pagina);
+        int marco_existente = buscar_pagina_en_memoria(memoria, file, tag, numero_pagina);
+        
+        log_debug(logger, "Query %d: Marco existente: %d", query_id, marco_existente);
 
-            if (marco_existente == -1)
+        if (marco_existente == -1)
+        {
+            int marco_libre = buscar_marco_libre(memoria);
+            log_debug(logger, "Query %d: READ - Marco libre encontrado: %d", query_id, marco_libre);
+            
+            if (marco_libre == -1)
             {
-                int marco_libre = buscar_marco_libre(memoria);
-                if (marco_libre == -1)
-                {
-                    int victima = -1;
-                    if (strcmp(cfg->algoritmo_reemplazo, "LRU") == 0)
-                        victima = seleccionar_victima_LRU(memoria);
-                    else if (strcmp(cfg->algoritmo_reemplazo, "CLOCK-M") == 0)
-                        victima = seleccionar_victima_CLOCKM(memoria);
+                log_debug(logger, "Query %d: READ - Memoria llena, aplicando %s", 
+                          query_id, cfg->algoritmo_reemplazo);
+                
+                int victima = -1;
+                if (strcmp(cfg->algoritmo_reemplazo, "LRU") == 0)
+                    victima = seleccionar_victima_LRU(memoria);
+                else if (strcmp(cfg->algoritmo_reemplazo, "CLOCK-M") == 0)
+                    victima = seleccionar_victima_CLOCKM(memoria);
+                
+                log_debug(logger, "Query %d: READ - Victima seleccionada: marco %d", query_id, victima);
 
-                    log_info(logger,
-                             "## \nQuery %d:\nSe reemplaza la página %s:%s/%d por la %s:%s/%d",
-                             query_id,
-                             memoria->marcos[victima].file,
-                             memoria->marcos[victima].tag,
-                             memoria->marcos[victima].numero_pagina,
-                             file,
-                             tag,
-                             numero_pagina);
+                log_info(logger,
+                         "## \nQuery %d:\nSe reemplaza la página %s:%s/%d por la %s:%s/%d",
+                         query_id,
+                         memoria->marcos[victima].file,
+                         memoria->marcos[victima].tag,
+                         memoria->marcos[victima].numero_pagina,
+                         file,
+                         tag,
+                         numero_pagina);
 
-                    if (memoria->marcos[victima].modificada)
-                        flush_file_to_storage(cfg, logger, query_id, memoria,
-                                              memoria->marcos[victima].file, memoria->marcos[victima].tag, worker_id);
+                if (memoria->marcos[victima].modificada)
+                    flush_file_to_storage(cfg, logger, query_id, memoria,
+                                          memoria->marcos[victima].file, memoria->marcos[victima].tag);
 
-                    liberar_marco(memoria, victima, logger);
-                    marco_libre = victima;
-                }
-
-                asignar_pagina(memoria, marco_libre, numero_pagina, file, tag, logger);
-                cargar_pagina_desde_storage(cfg, logger, query_id, memoria, marco_libre, file, tag, numero_pagina, worker_id);
-                marco_existente = marco_libre;
+                liberar_marco(memoria, victima, query_id, logger);
+                marco_libre = victima;
             }
 
-            leer_memoria(memoria, direccion, tamanio, logger, query_id, sock_master, file, tag);
-            log_info(logger, "## Query %d: - Instrucción realizada: READ %s:%s [%d bytes]", query_id, file, tag, tamanio);
+            asignar_pagina(memoria, marco_libre, numero_pagina, file, tag, query_id, logger);
+            cargar_pagina_desde_storage(cfg, logger, query_id, memoria, marco_libre, file, tag, numero_pagina);
+            marco_existente = marco_libre;
         }
-        break;
+
+        leer_memoria(memoria, direccion, tamanio, logger, query_id, sock_master);
+        log_info(logger, "## Query %d: - Instrucción realizada: READ %s:%s [%d bytes]",
+                 query_id, file, tag, tamanio);
+    }
+    break;
 
     case INS_TAG:
     {
-        if (params == NULL)
-        {
-            log_error(logger, "## Query %d: TAG sin parámetros", query_id);
-            break;
-        }
+        char file_origen[64], tag_origen[64], file_dest[64], tag_dest[64];
+        sscanf(params, "%[^:]:%s %[^:]:%s", file_origen, tag_origen, file_dest, tag_dest);
+        char *file_tag = string_from_format("%s:%s", file_dest, tag_dest);
 
-        char file_origen[64], tag_origen[64];
-        if (sscanf(params, "%63[^:]:%63s", file_origen, tag_origen) != 2)
-        {
-            log_error(logger, "## Query %d: TAG parámetros inválidos: '%s'", query_id, params);
-            break;
-        }
-
-        int index = 1;
-        char file_dest[64], tag_dest[64];
-        strcpy(file_dest, file_origen);
-
-        do
-        {
-            sprintf(tag_dest, "tag_%d_0_0", index++);
-        } while (tag_existe_en_storage(cfg, logger, worker_id, query_id, file_dest, tag_dest));
-
-        char comando_tag[256];
-        sprintf(comando_tag, "TAG|%d|%s:%s|%s:%s", query_id, file_origen, tag_origen, file_dest, tag_dest);
-
+        char comando_tag[512];
+        sprintf(comando_tag, "TAG|%d|%s|%s|%s|%s", query_id, file_origen, tag_origen, file_dest, tag_dest);
         char respuesta_tag[64];
-        if (enviar_comando_storage(cfg, logger, worker_id, query_id, comando_tag, respuesta_tag, sizeof(respuesta_tag)))
-            log_info(logger, "## Query %d: - TAG creado %s:%s -> %s:%s", query_id, file_origen, tag_origen, file_dest, tag_dest);
-        else
-            log_error(logger, "## Query %d: Error en TAG %s:%s -> %s:%s", query_id, file_origen, tag_origen, file_dest, tag_dest);
 
-        break;
+        if (enviar_comando_storage(cfg, logger, query_id, comando_tag, respuesta_tag, sizeof(respuesta_tag)))
+        {
+            log_info(logger, "## Query %d: - Instrucción realizada: TAG %s:%s -> %s:%s",
+                     query_id, file_origen, tag_origen, file_dest, tag_dest);
+        }
+        else
+        {
+            log_error(logger, "## Query %d: Error en TAG %s:%s -> %s:%s",
+                      query_id, file_origen, tag_origen, file_dest, tag_dest);
+        }
+
+        if (!existe_file_tag(archivos_modificados, file_tag))
+        {
+            list_add(archivos_modificados, string_duplicate(file_tag));
+        }
+        free(file_tag);
     }
+    break;
 
     case INS_COMMIT:
-        if (params == NULL || sscanf(params, "%63[^:]:%63s", file, tag) != 2)
+        sscanf(params, "%[^:]:%s", file, tag);
+
+        flush_file_to_storage(cfg, logger, query_id, memoria, file, tag);
+
+        char comando_commit[256];
+        sprintf(comando_commit, "COMMIT|%d|%s|%s", query_id, file, tag);
+        char respuesta_commit[64];
+
+        if (enviar_comando_storage(cfg, logger, query_id, comando_commit, respuesta_commit, sizeof(respuesta_commit)))
         {
-            log_error(logger, "## Query %d: COMMIT parámetros inválidos: '%s'", query_id, params ? params : "");
-            break;
+            log_info(logger, "## Query %d: - Instrucción realizada: COMMIT %s:%s", query_id, file, tag);
         }
-
-        flush_file_to_storage(cfg, logger, query_id, memoria, file, tag, worker_id);
-
+        else
         {
-            char comando_commit[256];
-            sprintf(comando_commit, "COMMIT|%d|%s|%s", query_id, file, tag);
-            char respuesta_commit[64];
-
-            if (enviar_comando_storage(cfg, logger, worker_id, query_id, comando_commit, respuesta_commit, sizeof(respuesta_commit)))
-                log_info(logger, "## Query %d: - Instrucción realizada: COMMIT %s:%s", query_id, file, tag);
-            else
-                log_error(logger, "## Query %d: Error en COMMIT %s:%s", query_id, file, tag);
+            log_error(logger, "## Query %d: Error en COMMIT %s:%s", query_id, file, tag);
         }
         break;
 
     case INS_FLUSH:
-        if (params == NULL || sscanf(params, "%63[^:]:%63s", file, tag) != 2)
-        {
-            log_error(logger, "## Query %d: FLUSH parámetros inválidos: '%s'", query_id, params ? params : "");
-            break;
-        }
+        sscanf(params, "%[^:]:%s", file, tag);
 
-        flush_file_to_storage(cfg, logger, query_id, memoria, file, tag, worker_id);
+        flush_file_to_storage(cfg, logger, query_id, memoria, file, tag);
+
         log_info(logger, "## Query %d: - Instrucción realizada: FLUSH %s:%s", query_id, file, tag);
         break;
 
     case INS_DELETE:
-        if (params == NULL || sscanf(params, "%63[^:]:%63s", file, tag) != 2)
+        sscanf(params, "%[^:]:%s", file, tag);
+
+        char comando_delete[256];
+        sprintf(comando_delete, "DELETE|%d|%s|%s", query_id, file, tag);
+        char respuesta_delete[64];
+
+        if (enviar_comando_storage(cfg, logger, query_id, comando_delete, respuesta_delete, sizeof(respuesta_delete)))
         {
-            log_error(logger, "## Query %d: DELETE parámetros inválidos: '%s'", query_id, params ? params : "");
-            break;
+            log_info(logger, "## Query %d: - Instrucción realizada: DELETE %s:%s", query_id, file, tag);
         }
-
+        else
         {
-            char comando_delete[256];
-            sprintf(comando_delete, "DELETE|%d|%s|%s", query_id, file, tag);
-            char respuesta_delete[64];
-
-            if (enviar_comando_storage(cfg, logger, worker_id, query_id, comando_delete, respuesta_delete, sizeof(respuesta_delete)))
-                log_info(logger, "## Query %d: - Instrucción realizada: DELETE %s:%s", query_id, file, tag);
-            else
-                log_error(logger, "## Query %d: Error en DELETE %s:%s", query_id, file, tag);
+            log_error(logger, "## Query %d: Error en DELETE %s:%s", query_id, file, tag);
         }
         break;
 
     case INS_END:
+        log_debug(logger, "Query %d: END - Procesando finalización", query_id);
+        
         enviar_comando_master(sock_master, logger, query_id, "FIN_QUERY", "");
         if (archivos_modificados && !list_is_empty(archivos_modificados))
         {
+            log_debug(logger, "Query %d: Flusheando %d archivos modificados", 
+                      query_id, list_size(archivos_modificados));
+
             for (int i = 0; i < list_size(archivos_modificados); i++)
             {
                 char *file_tag = list_get(archivos_modificados, i);
-                char file_local[64], tag_local[64];
-                if (sscanf(file_tag, "%63[^:]:%63s", file_local, tag_local) == 2)
-                {
-                    flush_file_to_storage(cfg, logger, query_id, memoria, file_local, tag_local, worker_id);
-                }
+                char file[64], tag[64];
+                sscanf(file_tag, "%[^:]:%s", file, tag);
+                log_debug(logger, "Query %d: Flusheando archivo %s:%s", query_id, file, tag);
+                flush_file_to_storage(cfg, logger, query_id, memoria, file, tag);
             }
             list_destroy_and_destroy_elements(archivos_modificados, free);
         }
@@ -361,8 +337,11 @@ void query_interpretar(char *line, int query_id, char *path_query, t_log *logger
     }
 }
 
-int enviar_comando_storage(t_worker_config *cfg, t_log *logger, int worker_id, int query_id, const char *comando, char *respuesta, int tam_respuesta)
+int enviar_comando_storage(t_worker_config *cfg, t_log *logger, int query_id, const char *comando, char *respuesta, int tam_respuesta)
 {
+    log_debug(logger, "Query %d: Intentando conectar a Storage en %s:%d", 
+              query_id, cfg->ip_storage, cfg->puerto_storage);
+    
     char puerto_str[6];
     sprintf(puerto_str, "%d", cfg->puerto_storage);
 
@@ -372,10 +351,18 @@ int enviar_comando_storage(t_worker_config *cfg, t_log *logger, int worker_id, i
         log_error(logger, "## Query %d: No se pudo conectar al Storage", query_id);
         return 0;
     }
+    
+    log_debug(logger, "Query %d: Conexión a Storage establecida (socket: %d)", query_id, sock_storage);
+    log_debug(logger, "Query %d: Enviando comando a Storage: %s", query_id, comando);
 
-    send(sock_storage, &worker_id, sizeof(int), 0);
-
-    send(sock_storage, comando, strlen(comando), 0);
+    if (send(sock_storage, comando, strlen(comando), 0) < 0)
+    {
+        log_error(logger, "## Query %d: Error enviando comando al Storage: %s", query_id, comando);
+        close(sock_storage);
+        return 0;
+    }
+    
+    log_debug(logger, "Query %d: Comando enviado correctamente, esperando respuesta...", query_id);
 
     int bytes = recv(sock_storage, respuesta, tam_respuesta - 1, 0);
     if (bytes > 0)
@@ -385,17 +372,21 @@ int enviar_comando_storage(t_worker_config *cfg, t_log *logger, int worker_id, i
     }
 
     close(sock_storage);
+    log_debug(logger, "Query %d: Conexión a Storage cerrada", query_id);
     return 1;
 }
 
 int enviar_comando_master(int sock_master, t_log *logger, int query_id, const char *comando, const char *datos)
 {
     char mensaje[512];
-
     if (strlen(datos) > 0)
-        sprintf(mensaje, "%s|%s\n", comando, datos);
+    {
+        sprintf(mensaje, "%s|%s", comando, datos);
+    }
     else
-        sprintf(mensaje, "%s\n", comando);
+    {
+        strcpy(mensaje, comando);
+    }
 
     if (send(sock_master, mensaje, strlen(mensaje), 0) < 0)
     {
@@ -433,17 +424,14 @@ void escribir_memoria(t_memoria_interna *memoria, int direccion, const char *con
     log_error(logger, "## Query %d: No se encontró la página %d en memoria para escribir", query_id, numero_pagina);
 }
 
-void leer_memoria(t_memoria_interna *memoria, int direccion, int tamanio, t_log *logger, int query_id, int sock_master, char *file, char *tag)
+void leer_memoria(t_memoria_interna *memoria, int direccion, int tamanio, t_log *logger, int query_id, int sock_master)
 {
     int numero_pagina = direccion / memoria->tamanio_pagina;
     int offset = direccion % memoria->tamanio_pagina;
 
     for (int i = 0; i < memoria->cant_marcos; i++)
     {
-        if (memoria->marcos[i].ocupada &&
-            memoria->marcos[i].numero_pagina == numero_pagina &&
-            strcmp(memoria->marcos[i].file, file) == 0 &&
-            strcmp(memoria->marcos[i].tag, tag) == 0)
+        if (memoria->marcos[i].ocupada && memoria->marcos[i].numero_pagina == numero_pagina)
         {
             char *marco_data = (char *)memoria->marcos[i].marco;
             char datos_leidos[256];
@@ -455,12 +443,9 @@ void leer_memoria(t_memoria_interna *memoria, int direccion, int tamanio, t_log 
 
             log_info(logger, "Query %d: Acción: LEER - Dirección Física: %d - Valor: %s", query_id, direccion, datos_leidos);
 
-            char mensaje[512];
-            sprintf(mensaje, "READ|%d|%s:%s|%s\n", query_id, file, tag, datos_leidos);
-
-            send(sock_master, mensaje, strlen(mensaje), 0);
-            log_info(logger, "## Query %d: Comando enviado al Master: %s", query_id, mensaje);
-
+            char comando_read[512];
+            sprintf(comando_read, "READ|%d|%s", query_id, datos_leidos);
+            enviar_comando_master(sock_master, logger, query_id, comando_read, "");
             return;
         }
     }
@@ -468,7 +453,7 @@ void leer_memoria(t_memoria_interna *memoria, int direccion, int tamanio, t_log 
     log_error(logger, "## Query %d: No se encontró la página %d en memoria para leer", query_id, numero_pagina);
 }
 
-void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, const char *file, const char *tag, int worker_id)
+void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, const char *file, const char *tag)
 {
     for (int i = 0; i < memoria->cant_marcos; i++)
     {
@@ -485,7 +470,7 @@ void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_
                     memoria->tamanio_pagina, marco_data);
 
             char respuesta_flush[64];
-            if (enviar_comando_storage(cfg, logger, worker_id, query_id, comando_flush, respuesta_flush, sizeof(respuesta_flush)))
+            if (enviar_comando_storage(cfg, logger, query_id, comando_flush, respuesta_flush, sizeof(respuesta_flush)))
             {
                 memoria->marcos[i].modificada = false;
                 log_info(logger, "## Query %d: FLUSH exitoso - Marco %d del file %s:%s",
@@ -495,7 +480,7 @@ void flush_file_to_storage(t_worker_config *cfg, t_log *logger, int query_id, t_
     }
 }
 
-void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, int marco, const char *file, const char *tag, int numero_pagina, int worker_id)
+void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_id, t_memoria_interna *memoria, int marco, const char *file, const char *tag, int numero_pagina)
 {
     log_info(logger, "Query %d: - Memoria Miss - File: %s - Tag: %s - Pagina: %d", query_id, file, tag, numero_pagina);
 
@@ -504,7 +489,7 @@ void cargar_pagina_desde_storage(t_worker_config *cfg, t_log *logger, int query_
 
     char respuesta[4096] = {0};
 
-    if (!enviar_comando_storage(cfg, logger, worker_id, query_id, comando_get, respuesta, sizeof(respuesta)))
+    if (!enviar_comando_storage(cfg, logger, query_id, comando_get, respuesta, sizeof(respuesta)))
     {
         log_error(logger, "## Query %d: Error al solicitar página %d del file %s:%s al Storage",
                   query_id, numero_pagina, file, tag);
@@ -537,16 +522,4 @@ bool existe_file_tag(t_list *archivos_modificados, char *file_tag)
         return strcmp((char *)elemento, file_tag) == 0;
     }
     return list_any_satisfy(archivos_modificados, _coincide);
-}
-
-bool tag_existe_en_storage(t_worker_config *cfg, t_log *logger, int worker_id, int query_id, const char *file, const char *tag)
-{
-    char comando[256];
-    sprintf(comando, "EXISTS_TAG|%s|%s", file, tag);
-
-    char respuesta[32];
-    if (!enviar_comando_storage(cfg, logger, worker_id, query_id, comando, respuesta, sizeof(respuesta)))
-        return false;
-
-    return (strcmp(respuesta, "EXISTS") == 0);
 }

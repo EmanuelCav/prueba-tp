@@ -51,7 +51,7 @@ int buscar_pagina_en_memoria(t_memoria_interna *mem, const char *file, const cha
     return -1;
 }
 
-void asignar_pagina(t_memoria_interna *mem, int marco, int numero_pagina, char *file, char *tag, t_log *logger)
+void asignar_pagina(t_memoria_interna *mem, int marco, int numero_pagina, char *file, char *tag, int query_id, t_log *logger)
 {
     t_pagina *p = &mem->marcos[marco];
     p->numero_pagina = numero_pagina;
@@ -63,15 +63,15 @@ void asignar_pagina(t_memoria_interna *mem, int marco, int numero_pagina, char *
 
     actualizar_tabla_pagina(mem, file, tag, numero_pagina, marco, true, false);
 
-    log_info(logger, "Se asigna el Marco: %d a la Página: %d perteneciente al - File: %s - Tag: %s\n",
-           marco, numero_pagina, file, tag);
+    log_info(logger, "Query %d: Se asigna el Marco: %d a la Página: %d perteneciente al - File: %s - Tag: %s",
+           query_id, marco, numero_pagina, file, tag);
 }
 
-void liberar_marco(t_memoria_interna *mem, int marco, t_log *logger)
+void liberar_marco(t_memoria_interna *mem, int marco, int query_id, t_log *logger)
 {
     t_pagina *p = &mem->marcos[marco];
-    log_info(logger, "Se libera el Marco: %d perteneciente al - File: %s - Tag: %s\n",
-           marco, p->file, p->tag);
+    log_info(logger, "Query %d: Se libera el Marco: %d perteneciente al - File: %s - Tag: %s",
+           query_id, marco, p->file, p->tag);
     limpiar_tabla_pagina(mem, p->file, p->tag, p->numero_pagina);
     p->ocupada = false;
     p->modificada = false;

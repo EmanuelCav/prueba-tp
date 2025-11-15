@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
     t_worker_config *cfg = leer_config_worker(argv[1]);
     logger = log_create(WORKER_LOG_PATH, WORKER_MODULE_NAME, 1, log_level_from_string(cfg->log_level));
 
-    int tamanio_pagina = consultar_storage(cfg, logger, worker_id);
+    int tamanio_pagina = consultar_storage(cfg, logger);
     t_memoria_interna *memoria = memoria_crear(cfg->tam_memoria, tamanio_pagina);
 
     log_info(logger, "Memoria interna inicializada: %d bytes, %d marcos de %d bytes",
@@ -73,6 +73,17 @@ int main(int argc, char *argv[])
                 {
                     log_info(logger, "## Query %d: Desalojada por pedido del Master", query_id);
 
+                    if (archivos_modificados && !list_is_empty(archivos_modificados))
+                    {
+                        for (int i = 0; i < list_size(archivos_modificados); i++)
+                        {
+                            char *file_tag = list_get(archivos_modificados, i);
+                            char file[64], tag[64];
+                            sscanf(file_tag, "%[^:]:%s", file, tag);
+                            flush_file_to_storage(cfg, logger, query_id, memoria, file, tag);
+                        }
+                    }
+
                     char respuesta[64];
                     sprintf(respuesta, "DESALOJO_OK|%d|%d", query_id, program_counter);
                     send(sock_master, respuesta, strlen(respuesta), 0);
@@ -86,7 +97,7 @@ int main(int argc, char *argv[])
         log_info(logger, "## Query %d: FETCH - Program Counter: %d - %s",
                  query_id, program_counter, line);
 
-        query_interpretar(line, query_id, path_query, logger, memoria, cfg, sock_master, archivos_modificados, worker_id);
+        query_interpretar(line, query_id, path_query, logger, memoria, cfg, sock_master, archivos_modificados);
 
         program_counter++;
 

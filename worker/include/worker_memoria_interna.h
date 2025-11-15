@@ -83,18 +83,20 @@ int buscar_pagina_en_memoria(t_memoria_interna *mem, const char *file, const cha
  * @param numero_pagina Número de página a asignar.
  * @param file Nombre del File.
  * @param tag Tag del File.
+ * @param query_id ID de la query para logging.
  * @param logger Path del logger.
  */
-void asignar_pagina(t_memoria_interna *mem, int marco, int numero_pagina, char *file, char *tag, t_log *logger);
+void asignar_pagina(t_memoria_interna *mem, int marco, int numero_pagina, char *file, char *tag, int query_id, t_log *logger);
 
 /**
  * @brief Libera un marco de la memoria interna.
  *
  * @param mem Puntero a la memoria interna.
  * @param marco Índice del marco a liberar.
+ * @param query_id ID de la query para logging.
  * @param logger Path del logger.
  */
-void liberar_marco(t_memoria_interna *mem, int marco, t_log *logger);
+void liberar_marco(t_memoria_interna *mem, int marco, int query_id, t_log *logger);
 
 /**
  * @brief Selecciona una página víctima utilizando el algoritmo LRU.

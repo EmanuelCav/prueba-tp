@@ -1,21 +1,23 @@
 #include "../include/storage_fs.h"
 
-void inicializar_fs(t_storage_config *cfg, t_log *logger)
+extern t_storage_config *cfg;
+
+void inicializar_fs(t_storage_config *config, t_log *logger)
 {
-    if (cfg->fresh_start)
+    if (config->fresh_start)
     {
         log_info(logger, "Inicializando FS desde cero (FRESH_START)");
 
-        crear_estructura_base("./", logger);
-        crear_superblock("./", cfg->fs_size, cfg->block_size, logger);
-        crear_bitmap("./", cfg->fs_size, cfg->block_size, logger);
-        crear_archivo_inicial("./", cfg->block_size, logger);
+        crear_estructura_base(config->punto_montaje, logger);
+        crear_superblock(config->punto_montaje, config->fs_size, config->block_size, logger);
+        crear_bitmap(config->punto_montaje, config->fs_size, config->block_size, logger);
+        crear_archivo_inicial(config->punto_montaje, config->block_size, logger);
 
-        log_info(logger, "FS inicializado correctamente en %s", "./");
+        log_info(logger, "FS inicializado correctamente en %s", config->punto_montaje);
     }
     else
     {
-        log_info(logger, "Cargando FS existente desde %s", "./");
+        log_info(logger, "Cargando FS existente desde %s", config->punto_montaje);
     }
 }
 
@@ -116,10 +118,10 @@ void crear_archivo_inicial(const char *root_path, int block_size, t_log *logger)
     }
 
     char path_block0[4096];
-    len = snprintf(path_block0, sizeof(path_block0), "%s/physical_blocks/block%06d.dat", root_path, 0);
+    len = snprintf(path_block0, sizeof(path_block0), "%s/physical_blocks/block0000.dat", root_path);
     if (len >= sizeof(path_block0))
     {
-        log_error(logger, "Ruta demasiado larga: %s/physical_blocks/block%06d.dat", root_path, 0);
+        log_error(logger, "Ruta demasiado larga: %s/physical_blocks/block0000.dat", root_path);
         exit(EXIT_FAILURE);
     }
 
@@ -133,21 +135,14 @@ void crear_archivo_inicial(const char *root_path, int block_size, t_log *logger)
     }
 
     char path_logical_block0[4096];
-    len = snprintf(path_logical_block0, sizeof(path_logical_block0), "%s/logical_blocks/%06d.dat", path_tag, 0);
+    len = snprintf(path_logical_block0, sizeof(path_logical_block0), "%s/logical_blocks/block0000.dat", path_tag);
     if (len >= sizeof(path_logical_block0))
     {
-        log_error(logger, "Ruta demasiado larga: %s/logical_blocks/%06d.dat", path_tag, 0);
+        log_error(logger, "Ruta demasiado larga: %s/logical_blocks/block0000.dat", path_tag);
         exit(EXIT_FAILURE);
     }
 
-    if (link(path_block0, path_logical_block0) != 0)
-    {
-        log_error(logger, "Error creando enlace lógico: %s -> %s", path_logical_block0, path_block0);
-    }
-    else
-    {
-        log_info(logger, "Bloque lógico enlazado: %s -> %s", path_logical_block0, path_block0);
-    }
-    
+    link(path_block0, path_logical_block0);
+    log_info(logger, "Bloque lógico enlazado: %s -> %s", path_logical_block0, path_block0);
     marcar_bloque_ocupado(0, logger);
 }

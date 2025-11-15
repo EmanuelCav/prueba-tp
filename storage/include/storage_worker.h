@@ -31,8 +31,7 @@ typedef enum
     CMD_TAG,
     CMD_COMMIT,
     CMD_DELETE,
-    CMD_END,
-    CMD_EXISTS_TAG
+    CMD_END
 } comando_t;
 
 extern int cantidad_workers;

@@ -49,7 +49,6 @@ void enviar_query_worker(t_queue *ready, t_list *exec, t_log *logger)
     {
         t_query *query_ready = queue_peek(ready);
         t_query *query_baja = NULL;
-        int index_baja = -1;
 
         for (int i = 0; i < list_size(exec); i++)
         {
@@ -57,7 +56,6 @@ void enviar_query_worker(t_queue *ready, t_list *exec, t_log *logger)
             if (!query_baja || q->prioridad > query_baja->prioridad)
             {
                 query_baja = q;
-                index_baja = i;
             }
         }
 
@@ -74,20 +72,6 @@ void enviar_query_worker(t_queue *ready, t_list *exec, t_log *logger)
                     log_info(logger, "## Se desaloja la Query %d (%d) del Worker %d - Motivo: PRIORIDAD",
                              query_baja->query_id, query_baja->prioridad, workers[i].worker_id);
 
-                    query_baja->program_counter += 10;
-
-                    list_remove(exec, index_baja);
-                    workers[i].ocupado = false;
-
-                    t_query *query_alta = queue_pop(ready);
-                    query_alta->worker_id = workers[i].worker_id;
-                    sprintf(msg, "%d|%s|%d", query_alta->query_id, query_alta->path_query, query_alta->prioridad);
-                    send(workers[i].socket, msg, strlen(msg), 0);
-                    workers[i].ocupado = true;
-                    list_add(exec, query_alta);
-
-                    log_info(logger, "## Se envía la Query %d (prioridad %d) al Worker %d tras desalojo",
-                             query_alta->query_id, query_alta->prioridad, workers[i].worker_id);
                     return;
                 }
             }

@@ -20,11 +20,11 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    if (access(archivo_query, F_OK) == -1)
+/*     if (access(archivo_query, F_OK) == -1)
     {
         perror("Error: el archivo de Query no existe");
         return EXIT_FAILURE;
-    }
+    } */
 
     t_config_query *cfg = leer_config(archivo_config);
     t_log *logger = log_create(QUERY_CONTROL_LOG_PATH, QUERY_CONTROL_MODULE_NAME, 1, log_level_from_string(cfg->log_level));

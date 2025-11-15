@@ -14,11 +14,11 @@ t_storage_config *leer_config_storage(const char *path)
     scfg->puerto_escucha = config_get_int_value(cfg, "PUERTO_ESCUCHA");
     scfg->fresh_start = config_get_int_value(cfg, "FRESH_START");
     strcpy(scfg->punto_montaje, config_get_string_value(cfg, "PUNTO_MONTAJE"));
+    scfg->fs_size = config_get_int_value(cfg, "FS_SIZE");
+    scfg->block_size = config_get_int_value(cfg, "BLOCK_SIZE");
     scfg->retardo_operacion = config_get_int_value(cfg, "RETARDO_OPERACION");
     scfg->retardo_acceso_bloque = config_get_int_value(cfg, "RETARDO_ACCESO_BLOQUE");
     strcpy(scfg->log_level, config_get_string_value(cfg, "LOG_LEVEL"));
-    scfg->fs_size = 4096;
-    scfg->block_size = 128;
     config_destroy(cfg);
     return scfg;
 }
