@@ -103,48 +103,43 @@ void *manejar_worker(void *arg)
     }
     case CMD_CREATE:
     {
+
         usleep(cfg->retardo_operacion * 1000);
-        int tamanio_inicial;
-        sscanf(buffer_original, "%*[^|]|%d|%[^|]|%[^|]|%d", &query_id, file, tag, &tamanio_inicial);
 
-        log_debug(logger, "Query %d: CREATE - File:%s Tag:%s Tamaño:%d",
-                  query_id, file, tag, tamanio_inicial);
+        int query_id, tamanio_inicial;
+        sscanf(buffer_original, "%*[^|]|%d|%[^|]|%[^|]|%d",
+               &query_id, file, tag, &tamanio_inicial);
 
-        char base_path[512];
-        sprintf(base_path, "%s/files/%s", cfg->punto_montaje, file);
+        char file_path[300];
+        char tag_path[300];
+        char logical_path[300];
+        char metadata_path[300];
 
-        char tag_path[512];
+        sprintf(file_path, "%s/files/%s", cfg->punto_montaje, file);
         sprintf(tag_path, "%s/files/%s/%s", cfg->punto_montaje, file, tag);
+        sprintf(logical_path, "%s/files/%s/%s/logical_blocks", cfg->punto_montaje, file, tag);
+        sprintf(metadata_path, "%s/files/%s/%s/metadata.config", cfg->punto_montaje, file, tag);
 
-        char logical_path[512];
-        sprintf(logical_path, "%s/files/%s/%s/logical_blocks",
-                cfg->punto_montaje, file, tag);
-
-        mkdir(base_path, 0777);
+        mkdir(file_path, 0777);
         mkdir(tag_path, 0777);
         mkdir(logical_path, 0777);
-
-        char metadata_path[512];
-        sprintf(metadata_path, "%s/metadata.config", tag_path);
 
         FILE *meta = fopen(metadata_path, "w");
         if (!meta)
         {
             log_error(logger, "Error creando metadata: %s", metadata_path);
-            send(client_sock, "ERR_CREATE_METADATA", strlen("ERR_CREATE_METADATA"), 0);
+            enviar_error(client_sock, "ERR_CREATE_METADATA");
             break;
         }
 
         fprintf(meta, "TAMAÑO=0\n");
         fprintf(meta, "BLOCKS=[]\n");
-        fprintf(meta, "ESTADO=UNCOMMITED\n");
+        fprintf(meta, "ESTADO=WORK_IN_PROGRESS\n");
         fclose(meta);
 
-        char resp[128];
-        sprintf(resp, "OK|CREATE|%s|%s", file, tag);
-        send(client_sock, resp, strlen(resp), 0);
+        log_info(logger, "##%d - File Creado %s:%s", query_id, file, tag);
+        enviar_ok(client_sock);
 
-        log_info(logger, "## Query %d - File Creado %s:%s", query_id, file, tag);
         break;
     }
     case CMD_TRUNCATE:
@@ -171,7 +166,7 @@ void *manejar_worker(void *arg)
                 cfg->punto_montaje, file, tag);
 
         int tamanio_actual = 0;
-        char estado[32] = "UNCOMMITED";
+        char estado[32] = "WORK_IN_PROGRESS";
         t_list *bloques = list_create();
 
         FILE *meta = fopen(path_metadata, "r");
@@ -221,7 +216,8 @@ void *manejar_worker(void *arg)
             log_debug(logger, "Query %d: Agregando %d bloques nuevos", query_id, faltan);
 
             char path_fisico_0[4096];
-            sprintf(path_fisico_0, "%s/physical_blocks/block000000.dat", cfg->punto_montaje);
+            sprintf(path_fisico_0, "%s/physical_blocks/block%04d.dat",
+                    cfg->punto_montaje, 0);
 
             for (int i = 0; i < faltan; i++)
             {
@@ -255,7 +251,9 @@ void *manejar_worker(void *arg)
                     continue;
                 }
 
-                list_add(bloques, (void *)0);
+                int *value = malloc(sizeof(int));
+                *value = 0;
+                list_add(bloques, value);
                 log_info(logger, "STORAGE | TRUNCATE | Bloque lógico %s creado.", nombre_bloque);
             }
         }
@@ -287,13 +285,13 @@ void *manejar_worker(void *arg)
 
         for (int i = 0; i < list_size(bloques); i++)
         {
-            fprintf(meta, "%d", (int)list_get(bloques, i));
+            fprintf(meta, "%d", *(int *)list_get(bloques, i));
             if (i < list_size(bloques) - 1)
                 fprintf(meta, ",");
         }
 
         fprintf(meta, "]\n");
-        fprintf(meta, "ESTADO=UNCOMMITED\n");
+        fprintf(meta, "ESTADO=WORK_IN_PROGRESS\n");
         fclose(meta);
 
         list_destroy(bloques);
@@ -340,7 +338,7 @@ void *manejar_worker(void *arg)
             strncat(meta_buf, linea_aux, sizeof(meta_buf) - strlen(meta_buf) - 1);
         fclose(meta);
 
-        char estado[32] = "UNCOMMITED";
+        char estado[32] = "WORK_IN_PROGRESS";
         char *p_estado = strstr(meta_buf, "ESTADO=");
         if (p_estado)
             sscanf(p_estado, "ESTADO=%31s", estado);
@@ -1090,7 +1088,8 @@ int asignar_bloque_libre(t_log *logger)
 void actualizar_blocks_hash_index(int num_bloque, t_log *logger)
 {
     char path_block[512];
-    sprintf(path_block, "%s/physical_blocks/block%06d.dat", cfg->punto_montaje, num_bloque);
+    sprintf(path_block, "%s/physical_blocks/block%06d.dat",
+            cfg->punto_montaje, num_bloque);
 
     FILE *f = fopen(path_block, "rb");
     if (!f)
@@ -1099,87 +1098,94 @@ void actualizar_blocks_hash_index(int num_bloque, t_log *logger)
         return;
     }
 
-    unsigned char data[cfg->block_size];
+    unsigned char *data = malloc(cfg->block_size);
     size_t leidos = fread(data, 1, cfg->block_size, f);
     fclose(f);
 
     if (leidos == 0)
     {
         log_error(logger, "HASH | Bloque vacío o error leyendo %s", path_block);
+        free(data);
         return;
     }
 
-    unsigned char hash[MD5_DIGEST_LENGTH];
-    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
-    EVP_DigestInit_ex(ctx, EVP_md5(), NULL);
-    EVP_DigestUpdate(ctx, data, leidos);
-    EVP_DigestFinal_ex(ctx, hash, NULL);
-    EVP_MD_CTX_free(ctx);
+    char *hash_string = crypto_md5(data, leidos);
+    free(data);
 
-    char hash_string[MD5_DIGEST_LENGTH * 2 + 1];
-    for (int i = 0; i < MD5_DIGEST_LENGTH; i++)
-        sprintf(&hash_string[i * 2], "%02x", hash[i]);
+    if (hash_string == NULL)
+    {
+        log_error(logger, "HASH | crypto_md5 falló en bloque %d", num_bloque);
+        return;
+    }
 
     pthread_mutex_lock(&mutex_meta);
 
     char index_path[1024];
-    snprintf(index_path, sizeof(index_path), "%s/blocks_hash_index.config", cfg->punto_montaje);
+    sprintf(index_path, "%s/blocks_hash_index.config", cfg->punto_montaje);
 
-    FILE *index = fopen(index_path, "r+");
-    if (!index)
-        index = fopen(index_path, "w");
-
-    if (!index)
-    {
-        pthread_mutex_unlock(&mutex_meta);
-        log_error(logger, "HASH | No se pudo abrir blocks_hash_index.config");
-        return;
-    }
+    FILE *index = fopen(index_path, "r");
+    bool exists = (index != NULL);
 
     char temp_path[1024];
-    snprintf(temp_path, sizeof(temp_path), "%s/blocks_hash_index.tmp", cfg->punto_montaje);
+    sprintf(temp_path, "%s/blocks_hash_index.tmp", cfg->punto_montaje);
+
     FILE *temp = fopen(temp_path, "w");
     if (!temp)
     {
-        fclose(index);
+        if (index)
+            fclose(index);
         pthread_mutex_unlock(&mutex_meta);
+        log_error(logger, "HASH | No se pudo crear archivo temporal de HASH");
+        free(hash_string);
         return;
     }
 
-    char line[256];
     int updated = 0;
-    while (fgets(line, sizeof(line), index))
+
+    if (exists)
     {
-        char existing_block[16];
-        if (sscanf(line, "%*[^=]=%s", existing_block) == 1)
+        char line[256];
+        while (fgets(line, sizeof(line), index))
         {
-            int blk;
-            if (sscanf(existing_block, "block%d", &blk) == 1 && blk == num_bloque)
+            char existing_hash[64];
+            char existing_block_text[64];
+
+            if (sscanf(line, "%63[^=]=%63s", existing_hash, existing_block_text) == 2)
             {
-                fprintf(temp, "%s=block%04d\n", hash_string, num_bloque);
-                updated = 1;
+                int blk;
+                if (sscanf(existing_block_text, "block%d", &blk) == 1 && blk == num_bloque)
+                {
+                    fprintf(temp, "%s=block%06d\n", hash_string, num_bloque);
+                    updated = 1;
+                }
+                else
+                {
+                    fputs(line, temp);
+                }
             }
             else
             {
                 fputs(line, temp);
             }
         }
-        else
-        {
-            fputs(line, temp);
-        }
+
+        fclose(index);
     }
 
     if (!updated)
-        fprintf(temp, "%s=block%04d\n", hash_string, num_bloque);
+        fprintf(temp, "%s=block%06d\n", hash_string, num_bloque);
 
-    fclose(index);
     fclose(temp);
+
     rename(temp_path, index_path);
 
     pthread_mutex_unlock(&mutex_meta);
 
-    log_info(logger, "HASH | Actualizado bloque %d -> %s", num_bloque, hash_string);
+    log_info(logger,
+             "HASH | Actualizado bloque %d -> %s",
+             num_bloque, hash_string);
+
+    free(hash_string);
 }
 
 int actualizar_metadata_agregar(const char *path_metadata, int bloque_fisico)
