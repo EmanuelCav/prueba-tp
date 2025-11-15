@@ -103,7 +103,6 @@ void *manejar_worker(void *arg)
     }
     case CMD_CREATE:
     {
-
         usleep(cfg->retardo_operacion * 1000);
 
         int query_id, tamanio_inicial;
@@ -128,7 +127,7 @@ void *manejar_worker(void *arg)
         if (!meta)
         {
             log_error(logger, "Error creando metadata: %s", metadata_path);
-            enviar_error(client_sock, "ERR_CREATE_METADATA");
+            send(client_sock, "ERR_CREATE_METADATA", strlen("ERR_CREATE_METADATA"), 0);
             break;
         }
 
@@ -138,7 +137,10 @@ void *manejar_worker(void *arg)
         fclose(meta);
 
         log_info(logger, "##%d - File Creado %s:%s", query_id, file, tag);
-        enviar_ok(client_sock);
+
+        char respuesta[256];
+        sprintf(respuesta, "OK|CREATE|%s|%s", file, tag);
+        send(client_sock, respuesta, strlen(respuesta), 0);
 
         break;
     }
