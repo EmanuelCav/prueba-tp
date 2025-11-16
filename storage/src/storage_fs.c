@@ -94,9 +94,9 @@ void crear_archivo_inicial(const char *root_path, int block_size, t_log *logger)
         exit(EXIT_FAILURE);
     }
 
-    mkdir(path_file, 0777);
-    mkdir(path_tag, 0777);
-    mkdir(path_logical, 0777);
+    mkdir_recursive(path_file);
+    mkdir_recursive(path_tag);
+    mkdir_recursive(path_logical);
     log_info(logger, "Directorios creados: %s, %s, %s", path_file, path_tag, path_logical);
 
     char path_metadata_config[4096];

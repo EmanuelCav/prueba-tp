@@ -119,9 +119,9 @@ void *manejar_worker(void *arg)
         sprintf(logical_path, "%s/files/%s/%s/logical_blocks", cfg->punto_montaje, file, tag);
         sprintf(metadata_path, "%s/files/%s/%s/metadata.config", cfg->punto_montaje, file, tag);
 
-        mkdir(file_path, 0777);
-        mkdir(tag_path, 0777);
-        mkdir(logical_path, 0777);
+        mkdir_recursive(file_path);
+        mkdir_recursive(tag_path);
+        mkdir_recursive(logical_path);
 
         FILE *meta = fopen(metadata_path, "w");
         if (!meta)
@@ -237,7 +237,7 @@ void *manejar_worker(void *arg)
                 char path_dir[4096];
                 sprintf(path_dir, "%s/files/%s/%s/logical_blocks",
                         cfg->punto_montaje, file, tag);
-                mkdir(path_dir, 0777);
+                mkdir_recursive(path_dir);
 
                 unlink(path_logico);
 
@@ -601,12 +601,12 @@ void *manejar_worker(void *arg)
             break;
         }
 
-        mkdir(path_destino, 0777);
+        mkdir_recursive(path_destino);
         char path_logical_origen[512], path_logical_destino[512];
         snprintf(path_logical_origen, sizeof(path_logical_origen), "%s/logical_blocks", path_origen);
         snprintf(path_logical_destino, sizeof(path_logical_destino), "%s/logical_blocks", path_destino);
 
-        mkdir(path_logical_destino, 0777);
+        mkdir_recursive(path_logical_destino);
 
         char meta_origen[512], meta_destino[512];
 
@@ -1362,4 +1362,26 @@ void marcar_bloque_ocupado(int num_bloque, t_log *logger)
     close(bitmap_fd);
 
     log_info(logger, "STORAGE | Bitmap actualizado: bloque %d marcado como OCUPADO.", num_bloque);
+}
+
+int mkdir_recursive(const char *path)
+{
+    char temp[512];
+    snprintf(temp, sizeof(temp), "%s", path);
+
+    size_t len = strlen(temp);
+    if (temp[len - 1] == '/')
+        temp[len - 1] = '\0';
+
+    for (char *p = temp + 1; *p; p++)
+    {
+        if (*p == '/')
+        {
+            *p = 0;
+            mkdir(temp, 0777);
+            *p = '/';
+        }
+    }
+
+    return mkdir(temp, 0777);
 }
