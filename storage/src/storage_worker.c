@@ -1366,22 +1366,25 @@ void marcar_bloque_ocupado(int num_bloque, t_log *logger)
 
 int mkdir_recursive(const char *path)
 {
-    char temp[512];
-    snprintf(temp, sizeof(temp), "%s", path);
+    char tmp[512];
+    char *p = NULL;
+    size_t len;
 
-    size_t len = strlen(temp);
-    if (temp[len - 1] == '/')
-        temp[len - 1] = '\0';
+    snprintf(tmp, sizeof(tmp), "%s", path);
+    len = strlen(tmp);
 
-    for (char *p = temp + 1; *p; p++)
+    if (tmp[len - 1] == '/')
+        tmp[len - 1] = 0;
+
+    for (p = tmp + 1; *p; p++)
     {
         if (*p == '/')
         {
             *p = 0;
-            mkdir(temp, 0777);
+            mkdir(tmp, 0777);
             *p = '/';
         }
     }
 
-    return mkdir(temp, 0777);
+    return mkdir(tmp, 0777);
 }
