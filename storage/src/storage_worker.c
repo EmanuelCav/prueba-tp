@@ -228,7 +228,7 @@ void *manejar_worker(void *arg)
                 int num_bloque_logico = bloques_actuales + i;
 
                 char nombre_bloque[32];
-                sprintf(nombre_bloque, "%06d", num_bloque_logico);
+                sprintf(nombre_bloque, "block%06d", num_bloque_logico);
 
                 char path_logico[4096];
                 sprintf(path_logico, "%s/files/%s/%s/logical_blocks/%s.dat",
